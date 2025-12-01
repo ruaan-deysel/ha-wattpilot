@@ -169,4 +169,4 @@ This integration is not officially associated with or endorsed by Fronius. Froni
 
 ## License
 
-[Apache-2.0](LICENSE). By providing a contribution, you agree the contribution is licensed under Apache-2.0.
+[MIT](LICENSE)

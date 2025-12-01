@@ -41,4 +41,4 @@ This integration is not officially associated with or endorsed by Fronius. It us
 
 ## License
 
-[Apache-2.0](LICENSE)
+[MIT](LICENSE)
