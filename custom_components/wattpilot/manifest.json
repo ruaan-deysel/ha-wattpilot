@@ -1,10 +1,10 @@
 {
   "domain": "wattpilot",
   "name": "Fronius Wattpilot",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "integration_type": "device",
   "config_flow": true,
-  "documentation": "https://github.com/mk-maddin/wattpilot-HA",
+  "documentation": "https://github.com/ruaan-deysel/ha-wattpilot",
   "requirements": [
     "wattpilot>=0.2",
     "pyyaml>=5.3.0",
@@ -14,7 +14,7 @@
   ],
   "dependencies": [],
   "codeowners": [
-    "@mk-maddin"
+    "@ruaan-deysel"
   ],
   "iot_class": "local_push",
   "loggers": [
