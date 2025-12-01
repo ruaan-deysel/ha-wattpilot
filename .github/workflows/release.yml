@@ -53,7 +53,7 @@ jobs:
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           echo "Extracting changelog for version $VERSION"
-          
+
           # Extract the section for this version from CHANGELOG.md
           # Looks for ## [version] and captures until the next ## or end
           CHANGELOG=$(awk -v ver="$VERSION" '
@@ -64,11 +64,11 @@ jobs:
             }
             found { print }
           ' CHANGELOG.md)
-          
+
           if [ -z "$CHANGELOG" ]; then
             CHANGELOG="Release version $VERSION"
           fi
-          
+
           # Write to file to preserve newlines
           echo "$CHANGELOG" > release_notes.md
           echo "Changelog extracted:"
