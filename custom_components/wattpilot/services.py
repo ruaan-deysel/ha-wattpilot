@@ -113,8 +113,9 @@ async def async_service_SetNextTrip(hass: HomeAssistant, call: ServiceCall) -> N
             timestamp = timestamp + 3600
 
         _LOGGER.debug(
-            "%s - async_service_SetNextTrip: set nexttrip timesamp %s for charger: %s",
+            "%s - async_service_SetNextTrip: set nexttrip timestamp %s for charger: %s",
             DOMAIN,
+            timestamp,
             charger.name,
         )
         await async_SetChargerProp(charger, "ftt", timestamp)
@@ -430,7 +431,7 @@ async def async_service_DisconnectCharger(
 
         if hasattr(charger, "disconnect") and callable(charger.disconnect):
             charger.disconnect()
-        else:  # workaround unitl wattpilot python package > 0.2 with built in disconnect is released
+        else:  # workaround until wattpilot python package > 0.2 with built-in disconnect is released
             charger._wsapp.close()
             charger._connected = False
         _LOGGER.info(

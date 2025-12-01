@@ -8,7 +8,7 @@ select:
 #  - id: <name of the charger prop to read - this ALWAYS has to be a property, not attribute>
 #    options: <id of the enum attribute which contains the options as values (not keys!) - this ALWAYS has to be a property, not attribute>
 #                <alternative: dict with enum for options>
-#    uid: <optional: unique ID postfix - required if mutliple entities wiht same <id> value exist>
+#    uid: <optional: unique ID postfix - required if multiple entities with same <id> value exist>
 #    name: <optional: name of the switch within HA>
 #    description: <optional: key within HA>
 #    icon: <optional: key within HA>
@@ -129,7 +129,7 @@ select:
       0: "None"
       1: "EuropeanSummerTime"
       2: "UsDaylightTime"
-      3: "AUEasternDaylightTime"      
+      3: "AUEasternDaylightTime"
     description: "Timezone daylight saving mode"
     icon: "mdi:map-clock"
     entity_category: config

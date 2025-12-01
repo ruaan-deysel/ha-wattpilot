@@ -14,7 +14,7 @@
     "step": {
       "user": {
         "title": "Wattpilot Setup",
-        "description": "Set up your Fronius Wattpilot EV charger."
+        "description": "Set up your Fronius Wattpilot EV charger. You will need the charger's IP address (for local connection) or serial number (for cloud connection) and the connection password."
       },
       "connection": {
         "title": "Connection Type",
@@ -28,7 +28,7 @@
       },
       "local": {
         "title": "Local Connection",
-        "description": "Configure local connection to your Wattpilot charger.",
+        "description": "Connect directly to your Wattpilot charger on your local network. This provides faster response times and works without internet.",
         "data": {
           "friendly_name": "Name",
           "ip_address": "IP address",
@@ -36,15 +36,15 @@
           "timeout": "Connection timeout"
         },
         "data_description": {
-          "friendly_name": "A friendly name for your charger (for display only).",
-          "ip_address": "The local IP address of your Wattpilot charger.",
-          "password": "The local connection password for your charger.",
-          "timeout": "Timeout in seconds for connection and initialization."
+          "friendly_name": "A friendly name for your charger (e.g., 'Garage Charger').",
+          "ip_address": "The local IP address of your Wattpilot (find it in your router or the Wattpilot app under Settings > WiFi).",
+          "password": "The local API password (find it in the Wattpilot app under Settings > WiFi > Show Password or on the charger's sticker).",
+          "timeout": "Timeout in seconds for connection and initialization (default: 30)."
         }
       },
       "cloud": {
         "title": "Cloud Connection",
-        "description": "Configure cloud connection to your Wattpilot charger.",
+        "description": "Connect to your Wattpilot charger via the Fronius/go-e cloud. Requires internet access but works from anywhere.",
         "data": {
           "friendly_name": "Name",
           "serial": "Serial number",
@@ -52,10 +52,10 @@
           "timeout": "Connection timeout"
         },
         "data_description": {
-          "friendly_name": "A friendly name for your charger (for display only).",
-          "serial": "The serial number of your Wattpilot charger.",
-          "password": "The cloud connection password for your charger.",
-          "timeout": "Timeout in seconds for connection and initialization."
+          "friendly_name": "A friendly name for your charger (e.g., 'Garage Charger').",
+          "serial": "The serial number of your Wattpilot (found on the charger's label or in the app under Settings > Info).",
+          "password": "The cloud connection password (find it in the Wattpilot app under Settings > Cloud or on the charger's sticker).",
+          "timeout": "Timeout in seconds for connection and initialization (default: 30)."
         }
       }
     }
@@ -78,7 +78,7 @@
       },
       "local": {
         "title": "Local Connection Options",
-        "description": "Update local connection settings for your Wattpilot charger.",
+        "description": "Update the connection settings for your locally connected Wattpilot charger.",
         "data": {
           "friendly_name": "Name",
           "ip_address": "IP address",
@@ -86,10 +86,10 @@
           "timeout": "Connection timeout"
         },
         "data_description": {
-          "friendly_name": "A friendly name for your charger (for display only).",
-          "ip_address": "The local IP address of your Wattpilot charger.",
-          "password": "The local connection password for your charger.",
-          "timeout": "Timeout in seconds for connection and initialization."
+          "friendly_name": "A friendly name for your charger (e.g., 'Garage Charger').",
+          "ip_address": "The local IP address of your Wattpilot (find it in your router or the Wattpilot app).",
+          "password": "The local API password (leave empty to keep current password).",
+          "timeout": "Timeout in seconds for connection and initialization (default: 30)."
         }
       },
       "cloud": {

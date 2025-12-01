@@ -145,6 +145,12 @@ async def async_setup_entry(
 class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
     """Switch class for Fronius Wattpilot integration."""
 
+    _state_attr = "_internal_state"
+
+    def _init_platform_specific(self) -> None:
+        """Platform specific init actions."""
+        self._internal_state = STATE_UNKNOWN
+
     async def _async_update_validate_platform_state(
         self, state: Any = None
     ) -> str | None:
@@ -196,9 +202,11 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
             return None
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """Return true if entity is on."""
-        return self.state == STATE_ON
+        if self._internal_state == STATE_UNKNOWN:
+            return None
+        return self._internal_state == STATE_ON
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Async: Turn entity on."""

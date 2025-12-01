@@ -85,7 +85,7 @@ _LOGGER.debug(
 
 
 async def async_ProgrammingDebug(obj, show_all: bool = False) -> None:
-    """Async: return all attributes of a specific objec"""
+    """Async: return all attributes of a specific object."""
     try:
         _LOGGER.debug("%s - async_ProgrammingDebug: %s", DOMAIN, obj)
         for attr in dir(obj):
@@ -110,7 +110,7 @@ async def async_ProgrammingDebug(obj, show_all: bool = False) -> None:
 
 
 def ProgrammingDebug(obj, show_all: bool = False) -> None:
-    """Return all attributes of a specific objec"""
+    """Return all attributes of a specific object."""
     try:
         _LOGGER.debug("%s - ProgrammingDebug: %s", DOMAIN, obj)
         for attr in dir(obj):
@@ -176,7 +176,7 @@ def PropertyUpdateHandler(
     """Watches on property updates and executes corresponding action"""
     try:
         # _LOGGER.debug("%s - PropertyUpdateHandler: 'self' execute async", entry_id)
-        if entry_id in hass.data[DOMAIN]:
+        if DOMAIN in hass.data and entry_id in hass.data[DOMAIN]:
             asyncio.run_coroutine_threadsafe(
                 async_PropertyUpdateHandler(hass, entry_id, identifier, value),
                 hass.loop,
@@ -194,7 +194,7 @@ def PropertyUpdateHandler(
 async def async_PropertyUpdateHandler(
     hass: HomeAssistant, entry_id: str, identifier: str, value: str
 ) -> None:
-    """Asnyc: Watches on property updates and executes corresponding action"""
+    """Async: Watches on property updates and executes corresponding action."""
     try:
         # _LOGGER.debug("%s - async_PropertyUpdateHandler: get entry_data", entry_id)
         entry_data = hass.data[DOMAIN][entry_id]
@@ -355,7 +355,7 @@ async def async_SetChargerProp(
             v = float(value)
         elif type(value) is types.SimpleNamespace:
             _LOGGER.warning(
-                "%s - async_SetChargerProp: Set for namespace detected - this is untest: %s=%s",
+                "%s - async_SetChargerProp: Set for namespace detected - this is untested: %s=%s",
                 DOMAIN,
                 identifier,
                 value,
@@ -590,7 +590,7 @@ async def async_DisconnectCharger(entry_or_device_id, charger):
         )
         if hasattr(charger, "disconnect") and callable(charger.disconnect):
             charger.disconnect()
-        else:  # workaround unitl wattpilot python package > 0.2 with built in disconnect is released
+        else:  # workaround until wattpilot python package > 0.2 with built-in disconnect is released
             charger._wsapp.close()
             charger._connected = False
         return

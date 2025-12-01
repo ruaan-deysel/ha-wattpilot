@@ -60,7 +60,7 @@ def utils_value2json(value):
 def wp_read_apidef():
     global WATTPILOT_SPLIT_PROPERTIES
 
-    api_definition = pkgutil.get_data(__name__, "ressources/wattpilot.yaml")
+    api_definition = pkgutil.get_data(__name__, "resources/wattpilot.yaml")
     wpdef = {
         "config": {},
         "messages": {},
@@ -839,14 +839,13 @@ def mqtt_get_remapped_property(pd, mapped_value):
 
 def mqtt_get_encoded_property(pd, value):
     mapped_value = mqtt_get_mapped_property(pd, value)
-    if (
-        value == None
-        or ("jsonType" in pd
+    if value == None or (
+        "jsonType" in pd
         and (
             pd["jsonType"] == "array"
             or pd["jsonType"] == "object"
             or pd["jsonType"] == "boolean"
-        ))
+        )
     ):
         return json.dumps(mapped_value, cls=JSONNamespaceEncoder)
     return mapped_value
@@ -1031,7 +1030,9 @@ def ha_get_component_for_prop(prop_info):
             component = "select"
         elif "jsonType" in prop_info and prop_info["jsonType"] == "boolean":
             component = "switch"
-        elif ("jsonType" in prop_info and prop_info["jsonType"] == "float") or ("jsonType" in prop_info and prop_info["jsonType"] == "integer"):
+        elif ("jsonType" in prop_info and prop_info["jsonType"] == "float") or (
+            "jsonType" in prop_info and prop_info["jsonType"] == "integer"
+        ):
             component = "number"
     elif "rw" in prop_info and prop_info["rw"] == "R":
         if "jsonType" in prop_info and prop_info["jsonType"] == "boolean":

@@ -10,7 +10,7 @@ update:
 #    id_trigger: <optional: name of the charger prop where the to be installed update version is written to, without it no install is possible - this ALWAYS has to be a property, not attribute>
 #    id_status: <optional: name of the charger prop which holds current install percentage of running install - this ALWAYS has to be a property, not attribute>
 #    set_type: <optional: type required by wattpilot api for setting value. 'bool','int','float' & 'string'>
-#    uid: <optional: unique ID postfix - required if mutliple entities wiht same <id> value exist>
+#    uid: <optional: unique ID postfix - required if multiple entities with same <id> value exist>
 #    name: <optional: name of the entity within HA>
 #    description: <optional: key within HA>
 #    icon: <optional: key within HA>

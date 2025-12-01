@@ -6,7 +6,7 @@
 switch:
 
 #  - id: <name of the charger prop to read - this ALWAYS has to be a property, not attribute>
-#    uid: <optional: unique ID postfix - required if mutliple entities wiht same <id> value exist>
+#    uid: <optional: unique ID postfix - required if multiple entities with same <id> value exist>
 #    name: <optional: name of the switch within HA>
 #    description: <optional: key within HA>
 #    icon: <optional: key within HA>
@@ -58,7 +58,7 @@ switch:
 
   - id: fup
     name: "PV Surplus"
-    description: "Use photovoltaik surplus energy to charge your car."
+    description: "Use photovoltaic surplus energy to charge your car."
     icon: "mdi:solar-power"
     entity_category: config
 

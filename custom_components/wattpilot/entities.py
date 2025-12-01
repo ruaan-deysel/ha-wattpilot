@@ -273,7 +273,7 @@ class ChargerPlatformEntity(Entity):
         """Return if device is available."""
         if self._init_failed:
             _LOGGER.debug(
-                "%s - %s: available: false because enitity init not complete",
+                "%s - %s: available: false because entity init not complete",
                 self._charger_id,
                 self._identifier,
             )

@@ -1,111 +1,172 @@
-[![GitHub Latest Release][releases_shield]][latest_release]
-[![Community Forum][community_forum_shield]][community_forum]
-[![PayPal.Me][paypal_me_shield]][paypal_me]
+# Fronius Wattpilot Integration for Home Assistant
 
-[latest_release]: https://github.com/mk-maddin/wattpilot-HA/releases/latest
-[releases_shield]: https://img.shields.io/github/release/mk-maddin/wattpilot-HA.svg?style=popout
+[![HACS Integration](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/custom-components/hacs)
+[![GitHub Release](https://img.shields.io/github/release/ruaan-deysel/ha-wattpilot.svg)](https://github.com/ruaan-deysel/ha-wattpilot/releases)
+[![License](https://img.shields.io/github/license/ruaan-deysel/ha-wattpilot.svg)](LICENSE)
 
-[community_forum_shield]: https://img.shields.io/static/v1.svg?label=%20&message=Forum&style=popout&color=41bdf5&logo=HomeAssistant&logoColor=white
-[community_forum]: https://community.home-assistant.io/t/fronius-wattpilot/403118
+Custom Home Assistant integration for monitoring and controlling Fronius Wattpilot EV chargers using a reverse-engineered WebSocket API.
 
-[paypal_me_shield]: https://img.shields.io/static/v1.svg?label=%20&message=PayPal.Me&logo=paypal
-[paypal_me]: https://paypal.me/KraemerMar
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ruaan-deysel&repository=ha-wattpilot&category=integration)
 
-# What This Is:
+## Features
 
-This is a custom component to allow control of [Fronius Wattpilot](https://www.fronius.com/en/solar-energy/installers-partners/technical-data/all-products/solutions/fronius-wattpilot/fronius-wattpilot/wattpilot-home-11-j) wallbox/electro vehicle charging devices in [Homeassistant](https://home-assistant.io) using the unofficial/reverese enginered [wattpilot python module](https://github.com/joscha82/wattpilot).
-
-WARNING:
-This is a work in progress project - it is still in early development stage, so there are still breaking changes possible.
-
-## Disclaimer:
-
-As written this is an unofficial implementation.
-Currently there does not seem to be an official API available by fronius, so this is all based on the work of volunteers and hobby programmers.
-It might stop working at any point in time.
-
-You are using this module (and it's prerequisites/dependencies) at your own risk.
-Not me neither any of contributors to this or any prerequired/dependency project are responsible for damage in any kind caused by this project or any of its prerequsites/dependencies.
-
-# What It Does:
-
-Allows for control of [Fronius Wattpilot](https://www.fronius.com/en/solar-energy/installers-partners/products-solutions/residential-energy-solutions/e-mobility-and-photovoltaic-residential/wattpilot-ev-charging-solution-for-homes) wallbox/electro vehicle charging devices via home assistant with the following features:
-
-* works with wattpilot, wattpilot V2 & wattpilot flex
-* connect charger via local LAN or via Cloud
-* charging mode change
-* start / stop charging
-* configuration for different charging behaviours
-* sensors for charging box status
-* manual disconnect/reconnect chargers (Helpful for Wattpilot GO version)
-* next trip timing configuration via service call (& event when next trip timing value is changed) -> you can create an [input_datetime (example)](packages/wattpilot/wattpilot_input_datetime.yaml) entity & corresponding [automation (example)](packages/wattpilot/wattpilot_automation.yaml) which ensures the input_datetime is in sync with the setting wihtin your wattpilot charger
-* log value changes for properties of the wallbox as warnings (enable/disable via service call)
-* can enable/disable e-go cloud charging API (enable/disable via service call) -> this is at your own responsibility - is not clear if fronius/you "pay" in some way for the e-go cloud API and thus are legally allowed to use -> as it is not required at the moment for the functionality of this component, I do not recommend to enable
-
-## Open Topics:
-
-* create a light integration for LED color control etc.
-* evaluate entity unique ID generation using WP serial number
-
-## Known Errors:
-
-* No explicit known errors
-* See https://github.com/mk-maddin/wattpilot-HA/issues for issues.
-
-# Screenshots
-
-### Example Device (additional sensors + buttons can be enabled)
-
-![screenshot of Wattpilot Device](doc/device_view1.jpg)
-
-![screenshot of Wattpilot Device](doc/device_view2.jpg)
-
-![screenshot of Wattpilot Device](doc/device_view3.jpg)
-
-### Next Trip via timing via Service Call
-
-![screenshot of Next Trip service](doc/service_view1.jpg)
-
-# Installation and Configuration
+- **Comprehensive Control**: Switch between charging modes (Default, Eco, Next Trip), start/stop charging, and configure charging behavior
+- **Real-Time Monitoring**: Track charging status, power consumption, energy usage, and vehicle connection state
+- **Multiple Connection Options**: Connect via local LAN (WebSocket) or Fronius Cloud
+- **Device Compatibility**: Works with Wattpilot Home 11J, Wattpilot Home 22J, and Wattpilot Flex
+- **Next Trip Planning**: Configure departure times via service calls with input_datetime synchronization
+- **Automation Friendly**: Full integration with Home Assistant automations and scripts
 
 ## Installation
 
-### Install with HACS
+### HACS (Recommended)
 
-Do you you have [HACS](https://community.home-assistant.io/t/custom-component-hacs) installed?
-You can manually add this repository to your HACS installation. [Here is the manual process](https://hacs.xyz/docs/faq/custom_repositories/).
-Then search for "Wattpilot" and install it directy from HACS.
-HACS will keep track of updates and you can easily upgrade to latest version. See Configuration for how to add it in HA.
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ruaan-deysel&repository=ha-wattpilot&category=integration)
 
-### Install manually
-Download the repository and save the "wattpilot" folder into your home assistant custom_components directory.
+**Manual HACS Installation:**
 
-Once the files are downloaded, you’ll need to **restart HomeAssistant** and wait some minutes (probably clear your browser cache),
-for the integration to appear within the integration store.
+1. Open HACS in Home Assistant
+2. Go to Integrations
+3. Click the ⋮ menu → Custom repositories
+4. Add this repository: `https://github.com/ruaan-deysel/ha-wattpilot`
+5. Category: Integration
+6. Click Add
+7. Search for "Fronius Wattpilot"
+8. Click Download
+9. Restart Home Assistant
+
+### Manual
+
+1. Download the latest release from the [Releases](https://github.com/ruaan-deysel/ha-wattpilot/releases) page
+2. Extract the `wattpilot` folder to your Home Assistant `config/custom_components/` directory
+3. Restart Home Assistant
 
 ## Configuration
 
-### Using MyHA:
+1. Go to Settings → Devices & Services
+2. Click + Add Integration
+3. Search for "Fronius Wattpilot"
+4. Choose your connection type:
+   - **Local**: Enter your charger's IP address and password
+   - **Cloud**: Enter your Wattpilot serial number and Fronius account credentials
 
-[MyHA - Add Integration](https://my.home-assistant.io/redirect/config_flow_start?domain=wattpilot)
+## Entities
 
-### Manually:
+### Controls
+- **Charging Mode**: Switch between Default, Eco, and Next Trip modes
+- **Force State**: Control charging (Neutral, Off, On)
+- **Cable Lock**: Lock/unlock the charging cable
 
-1. Browse to your Home Assistant instance.
-2. In the sidebar click on Configuration.
-3. From the configuration menu select: Integrations.
-4. In the bottom right, click on the Add Integration button.
-5. From the list, search and select "Fronius Wattpilot".
-6. Follow the instruction on screen to complete the set up.
-   (If connecting local/LAN you will require the local IP - for cloud connection your wattpilot serial is required)
+### Sensors
+- **Car State**: Vehicle connection and charging status
+- **Power**: Current charging power (W/kW)
+- **Current**: Charging current per phase (A)
+- **Voltage**: Voltage per phase (V)
+- **Energy**: Session energy and total energy counters
+- **Temperature**: Charger temperature readings
 
-![screenshot of Config Flow](doc/config_flow1.jpg)
+### Diagnostics
+- **Connection Status**: Online/offline state
+- **Firmware Version**: Current firmware information
+- **Error Codes**: Active error states
 
-# Credits:
+## Services
 
-Big thank you go to [@joscha82](https://github.com/joscha82).
-Without his greate prework in the [wattpilot python module](https://github.com/joscha82/wattpilot) it would be not possible to create this.
+The integration provides several services for advanced control:
 
-# License
+- `wattpilot.set_next_trip` - Set departure time for Next Trip mode
+- `wattpilot.set_go_current` - Set charging current for portable chargers
+- `wattpilot.connect` - Manually connect to the charger
+- `wattpilot.disconnect` - Manually disconnect from the charger
 
-[Apache-2.0](LICENSE). By providing a contribution, you agree the contribution is licensed under Apache-2.0. This is required for Home Assistant contributions.
+### Example: Next Trip Automation
+
+```yaml
+automation:
+  - alias: "Set Wattpilot Next Trip"
+    trigger:
+      - platform: state
+        entity_id: input_datetime.wattpilot_departure
+    action:
+      - service: wattpilot.set_next_trip
+        data:
+          device_id: !input wattpilot_device
+          departure_time: "{{ states('input_datetime.wattpilot_departure') }}"
+```
+
+See [packages/wattpilot/](packages/wattpilot/) for complete automation examples.
+
+## Troubleshooting
+
+### Common Issues
+
+**Cannot Connect (Local)**
+- Verify the charger's IP address is correct
+- Ensure Home Assistant can reach the charger on your network
+- Check that the password matches (found in the Wattpilot app)
+
+**Cannot Connect (Cloud)**
+- Verify your Fronius account credentials
+- Ensure the serial number is correct
+- Check your internet connection
+
+**Entities Not Updating**
+- Check connection status in logs
+- Verify WebSocket connection is active
+- Try reloading the integration
+
+### Debug Logging
+
+Enable debug logging by adding to your `configuration.yaml`:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.wattpilot: debug
+```
+
+## Screenshots
+
+### Device View
+![screenshot of Wattpilot Device](doc/device_view1.jpg)
+![screenshot of Wattpilot Device](doc/device_view2.jpg)
+![screenshot of Wattpilot Device](doc/device_view3.jpg)
+
+### Service Call
+![screenshot of Next Trip service](doc/service_view1.jpg)
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run linting: `./scripts/lint`
+5. Submit a pull request
+
+### Development Setup
+
+```bash
+git clone https://github.com/ruaan-deysel/ha-wattpilot.git
+cd ha-wattpilot
+./scripts/setup    # Install dependencies
+./scripts/develop  # Start Home Assistant dev instance
+```
+
+## Credits
+
+Based on the excellent work by [@joscha82](https://github.com/joscha82) on the [wattpilot python module](https://github.com/joscha82/wattpilot).
+
+Originally developed by [@mk-maddin](https://github.com/mk-maddin).
+
+## Disclaimer
+
+This integration is not officially associated with or endorsed by Fronius. Fronius trademarks belong to Fronius International GmbH. This integration is independently developed using a reverse-engineered API and may stop working at any time.
+
+**Use at your own risk.** Neither the contributors nor maintainers are responsible for any damage caused by this integration.
+
+## License
+
+[Apache-2.0](LICENSE). By providing a contribution, you agree the contribution is licensed under Apache-2.0.

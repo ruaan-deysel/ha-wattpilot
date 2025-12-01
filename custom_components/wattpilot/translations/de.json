@@ -14,7 +14,7 @@
     "step": {
       "user": {
         "title": "Wattpilot Einrichtung",
-        "description": "Richten Sie Ihre Fronius Wattpilot Ladestation ein."
+        "description": "Richten Sie Ihre Fronius Wattpilot Ladestation ein. Sie benötigen die IP-Adresse (für lokale Verbindung) oder Seriennummer (für Cloud-Verbindung) und das Verbindungspasswort."
       },
       "connection": {
         "title": "Verbindungsart",
@@ -28,7 +28,7 @@
       },
       "local": {
         "title": "Lokale Verbindung",
-        "description": "Konfigurieren Sie die lokale Verbindung zu Ihrer Wattpilot Ladestation.",
+        "description": "Verbinden Sie sich direkt mit Ihrer Wattpilot Ladestation im lokalen Netzwerk. Dies bietet schnellere Reaktionszeiten und funktioniert ohne Internet.",
         "data": {
           "friendly_name": "Name",
           "ip_address": "IP-Adresse",
@@ -36,15 +36,15 @@
           "timeout": "Verbindungs-Timeout"
         },
         "data_description": {
-          "friendly_name": "Ein Anzeigename für Ihre Ladestation.",
-          "ip_address": "Die lokale IP-Adresse Ihrer Wattpilot Ladestation.",
-          "password": "Das lokale Verbindungspasswort für Ihre Ladestation.",
-          "timeout": "Timeout in Sekunden für Verbindung und Initialisierung."
+          "friendly_name": "Ein Anzeigename für Ihre Ladestation (z.B. 'Garagen-Ladestation').",
+          "ip_address": "Die lokale IP-Adresse Ihrer Wattpilot (finden Sie in Ihrem Router oder in der Wattpilot App unter Einstellungen > WiFi).",
+          "password": "Das lokale API-Passwort (finden Sie in der Wattpilot App unter Einstellungen > WiFi > Passwort anzeigen oder auf dem Aufkleber der Ladestation).",
+          "timeout": "Timeout in Sekunden für Verbindung und Initialisierung (Standard: 30)."
         }
       },
       "cloud": {
         "title": "Cloud-Verbindung",
-        "description": "Konfigurieren Sie die Cloud-Verbindung zu Ihrer Wattpilot Ladestation.",
+        "description": "Verbinden Sie sich mit Ihrer Wattpilot Ladestation über die Fronius/go-e Cloud. Erfordert Internetzugang, funktioniert aber von überall.",
         "data": {
           "friendly_name": "Name",
           "serial": "Seriennummer",
@@ -52,10 +52,10 @@
           "timeout": "Verbindungs-Timeout"
         },
         "data_description": {
-          "friendly_name": "Ein Anzeigename für Ihre Ladestation.",
-          "serial": "Die Seriennummer Ihrer Wattpilot Ladestation.",
-          "password": "Das Cloud-Verbindungspasswort für Ihre Ladestation.",
-          "timeout": "Timeout in Sekunden für Verbindung und Initialisierung."
+          "friendly_name": "Ein Anzeigename für Ihre Ladestation (z.B. 'Garagen-Ladestation').",
+          "serial": "Die Seriennummer Ihrer Wattpilot (auf dem Etikett der Ladestation oder in der App unter Einstellungen > Info).",
+          "password": "Das Cloud-Verbindungspasswort (finden Sie in der Wattpilot App unter Einstellungen > Cloud oder auf dem Aufkleber der Ladestation).",
+          "timeout": "Timeout in Sekunden für Verbindung und Initialisierung (Standard: 30)."
         }
       }
     }
@@ -78,7 +78,7 @@
       },
       "local": {
         "title": "Lokale Verbindungsoptionen",
-        "description": "Aktualisieren Sie die lokalen Verbindungseinstellungen für Ihre Wattpilot Ladestation.",
+        "description": "Aktualisieren Sie die Verbindungseinstellungen für Ihre lokal verbundene Wattpilot Ladestation.",
         "data": {
           "friendly_name": "Name",
           "ip_address": "IP-Adresse",
@@ -86,10 +86,10 @@
           "timeout": "Verbindungs-Timeout"
         },
         "data_description": {
-          "friendly_name": "Ein Anzeigename für Ihre Ladestation.",
-          "ip_address": "Die lokale IP-Adresse Ihrer Wattpilot Ladestation.",
-          "password": "Das lokale Verbindungspasswort für Ihre Ladestation.",
-          "timeout": "Timeout in Sekunden für Verbindung und Initialisierung."
+          "friendly_name": "Ein Anzeigename für Ihre Ladestation (z.B. 'Garagen-Ladestation').",
+          "ip_address": "Die lokale IP-Adresse Ihrer Wattpilot (finden Sie in Ihrem Router oder der Wattpilot App).",
+          "password": "Das lokale API-Passwort (leer lassen, um das aktuelle Passwort beizubehalten).",
+          "timeout": "Timeout in Sekunden für Verbindung und Initialisierung (Standard: 30)."
         }
       },
       "cloud": {

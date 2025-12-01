@@ -174,11 +174,45 @@ class ChargerNumber(ChargerPlatformEntity, NumberEntity):
         """Platform specific init actions."""
         return self.state
 
-    async def _async_update_validate_platform_state(self, state: Any = None) -> Any:
-        """Async: Validate the given state for sensor specific requirements."""
-        if self._attr_native_unit_of_measurement is not None:
-            self._attr_native_value = state
-        return state
+    @property
+    def native_value(self) -> float | None:
+        """Return the current value, handling list/tuple values from charger."""
+        value = self._attr_native_value
+        # Handle list/tuple values - take the first element
+        if isinstance(value, list | tuple):
+            value = value[0] if value else None
+        # Convert to float if possible
+        if value is not None:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+        return None
+
+    async def _async_update_validate_platform_state(
+        self, state: Any = None
+    ) -> float | None:
+        """Async: Validate the given state for number specific requirements."""
+        try:
+            # Handle list/tuple values - take the first element
+            if isinstance(state, list | tuple):
+                state = state[0] if state else None
+
+            # Convert to float if possible
+            if state is not None:
+                state = float(state)
+                self._attr_native_value = state
+
+            return state
+        except (TypeError, ValueError, IndexError) as e:
+            _LOGGER.warning(
+                "%s - %s: _async_update_validate_platform_state failed to convert state to float: %s (%s)",
+                self._charger_id,
+                self._identifier,
+                state,
+                e,
+            )
+            return None
 
     async def async_set_native_value(self, value: float) -> None:
         """Async: Change the current value."""

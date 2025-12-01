@@ -4,7 +4,7 @@
 
 set_next_trip:
   name: Set Next Trip
-  dscription: Set the time for the next trip used by next trip charging mode
+  description: Set the time for the next trip used by next trip charging mode
   fields:
     device_id:
       name: Charger
@@ -22,7 +22,7 @@ set_next_trip:
 
 set_goe_cloud:
   name: Set Go-E Cloud
-  dscription: Enable or disable the Go-E cloud access for wallbox
+  description: Enable or disable the Go-E cloud access for wallbox
   fields:
     device_id:
       name: Charger
@@ -40,7 +40,7 @@ set_goe_cloud:
 
 set_debug_properties:
   name: Set debug properties
-  dscription: Enable or disable logging of charger property changes as warning within logs
+  description: Enable or disable logging of charger property changes as warning within logs
   fields:
     device_id:
       name: Charger
@@ -52,14 +52,14 @@ set_debug_properties:
     debug_properties:
       name: Debug
       description: TRUE to debug all properties; FALSE to debug none; list of properties to debug only these
-      example: 
+      example:
         - wda
         - cci
         - err
 
 disconnect_charger:
   name: Disconnect Charger
-  dscription: Disconnect an established charger connection (entities will be unavailable)
+  description: Disconnect an established charger connection (entities will be unavailable)
   fields:
     device_id:
       name: Charger
@@ -70,8 +70,8 @@ disconnect_charger:
           integration: wattpilot
 
 reconnect_charger:
-  name: ReConnect Charger
-  dscription: (Re)connect an disconnected charger connection
+  name: Reconnect Charger
+  description: Reconnect a disconnected charger connection
   fields:
     device_id:
       name: Charger

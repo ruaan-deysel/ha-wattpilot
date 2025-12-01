@@ -7,7 +7,7 @@ button:
 
 #  - id: <name of the charger prop to read - this ALWAYS has to be a property, not attribute>
 #    set_value: <value to be set on button press for id property>
-#    uid: <optional: unique ID postfix - required if mutliple entities wiht same <id> value exist>
+#    uid: <optional: unique ID postfix - required if multiple entities with same <id> value exist>
 #    set_type: <optional: type required by wattpilot api for setting value. 'bool','int','float' & 'string'>
 #    name: <optional: name of the switch within HA>
 #    description: <optional: key within HA>

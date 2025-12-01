@@ -8,7 +8,7 @@ sensor:
 #  - source: <property / attribute / namespacelist>
 #    id: <name of the charger attribute or prop to read>
 #    name: <optional: name of the sensor within HA>
-#    uid: <optional: unique ID postfix - required if mutliple entities wiht same <id> value exist>
+#    uid: <optional: unique ID postfix - required if multiple entities with same <id> value exist>
 #    description: <optional: key within HA>
 #    icon: <optional: key within HA>
 #    enabled: <optional: if set to False entity is by default disabled>
@@ -18,7 +18,7 @@ sensor:
 #    entity_category: <optional: key within HA>
 #    value_id: <required for charger properties of type namespace: define which namespace attribute should be used as state value>
 #    namespace_id: <required for namespacelist source objects: define which item from the list of namespaces should be used>
-#    attribute_ids: <optional for charger properties of type namespace: define which namespace attributes should be included into HA> 
+#    attribute_ids: <optional for charger properties of type namespace: define which namespace attributes should be included into HA>
 #    enum: <optional dict to map states to enum values>
 #    firmware: <optional string ">=1.1" | "<=1.1" | "==1.1" | "<1.1" | ">1.1" to setup entity only if charger firmware matches>
 #    variant: <optional string "11 / 22" to setup entity only if charger variant matches 11kW version or 22kW version>
@@ -225,7 +225,7 @@ sensor:
       - message
 
   - source: property
-    id: ccw 
+    id: ccw
     name: "WiFi Connection"
     description: "WiFi connection information"
     icon: "mdi:wifi"
@@ -302,7 +302,7 @@ sensor:
       2: "UnlockFailed"
       3: "Locked"
       4: "LockFailed"
-      5: "LockUnlockPowerout"      
+      5: "LockUnlockPowerout"
     description: "Actual lock feedback - values are: 'Unknown', 'Unlocked', 'UnlockFailed', 'Locked', 'LockFailed', 'LockUnlockPowerout'"
     icon: "mdi:lock-reset"
     enabled: False
@@ -510,7 +510,7 @@ sensor:
       6: "DISCONNECTED"
       8: "CONNECTING"
       9: "DISCONNECTING"
-      10: "NO_SHIELD"      
+      10: "NO_SHIELD"
     description: "WiFi status - values are: 'IDLE_STATUS', 'NO_SSID_AVAIL', 'SCAN_COMPLETED', 'CONNECTED', 'CONNECT_FAILED', 'CONNECTION_LOST', 'DISCONNECTED', 'CONNECTING', 'DISCONNECTING', 'NO_SHIELD'"
     icon: "mdi:wifi-settings"
     enabled: False
