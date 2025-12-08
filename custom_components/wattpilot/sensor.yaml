@@ -247,7 +247,7 @@ sensor:
       2: "Unlock Failed"
       3: "Locked"
       4: "Lock Failed"
-      5: "Lock Unlock Power Out"
+      5: "Lock/Unlock Power Out"
     description: "Cable unlock status - values are: 'Unknown', 'Unlocked', 'Unlock Failed', 'Locked', 'Lock Failed', 'Lock Unlock Power Out'"
     icon: "mdi:state-machine"
     entity_category: diagnostic
