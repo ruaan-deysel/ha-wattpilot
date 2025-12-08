@@ -1,5 +1,5 @@
 {
-  "name": "Fronius Wattpilot-HA",
+  "name": "Fronius Wattpilot",
   "iot_class": "Local Polling",
   "homeassistant": "2024.4.0",
   "hide_default_branch": false,
