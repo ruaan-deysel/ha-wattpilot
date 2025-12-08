@@ -302,8 +302,8 @@ sensor:
       2: "Unlock Failed"
       3: "Locked"
       4: "Lock Failed"
-      5: "Lock Unlock Power Out"
-    description: "Actual lock feedback - values are: 'Unknown', 'Unlocked', 'Unlock Failed', 'Locked', 'Lock Failed', 'Lock Unlock Power Out'"
+      5: "Lock/Unlock Power Out"
+    description: "Actual lock feedback - values are: 'Unknown', 'Unlocked', 'Unlock Failed', 'Locked', 'Lock Failed', 'Lock/Unlock Power Out'"
     icon: "mdi:lock-reset"
     enabled: False
     entity_category: diagnostic
