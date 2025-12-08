@@ -278,7 +278,7 @@ sensor:
       22: "Reserved 22"
       23: "Reserved 23"
       24: "Reserved 24"
-    description: "Internal error state - values are: 'None', 'FiAc', 'FiDc', 'Phase', 'Overvolt', 'Overamp', 'Diode', 'PpInvalid', 'GndInvalid', 'ContactorStuck', 'ContactorMiss', 'FiUnknown', 'Unknown', 'Overtemp', 'NoComm', 'StatusLockStuckOpen', 'StatusLockStuckLocked', 'Reserved20', 'Reserved21', 'Reserved22', 'Reserved23', 'Reserved24'"
+    description: "Internal error state - values are: 'None', 'FI AC', 'FI DC', 'Phase', 'Overvolt', 'Overamp', 'Diode', 'PP Invalid', 'Gnd Invalid', 'Contactor Stuck', 'Contactor Missing', 'FI Unknown', 'Unknown', 'Overtemp', 'No Comm', 'Status Lock Stuck Open', 'Status Lock Stuck Locked', 'Reserved 20', 'Reserved 21', 'Reserved 22', 'Reserved 23', 'Reserved 24'"
     icon: "mdi:alert-circle"
     entity_category: diagnostic
 
