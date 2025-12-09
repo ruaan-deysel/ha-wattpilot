@@ -17,20 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Services are now registered once globally (guarded in `async_setup`/`async_setup_entry`) to avoid duplicate registrations when multiple chargers exist.
 - Changelog and manifest version bumped to 0.4.1.
+- Code formatting improvements and style consistency fixes across the codebase
 
 ### Fixed
 
 - Entity polling now awaits `async_local_poll` directly (no misuse of `async_create_task`).
 - Property update handling refactored to use `entry.runtime_data` exclusively (no `hass.data` dependency), improving push updates and reload resilience.
 - Timeout/connection lookups now read from `runtime_data.params`; `carConnected` sensor displays the corrected friendly name.
-
-### Fixed
-
 - **Git-LFS dependency**: Removed Git-LFS configuration and hooks from repository. The repository no longer requires Git-LFS as it's not necessary for Python Home Assistant integration distribution.
-
-### Changed
-
-- Code formatting improvements and style consistency fixes across the codebase
 
 ## [0.3.9] - 2025-12-01
 
