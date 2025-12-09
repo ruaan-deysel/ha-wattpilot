@@ -29,7 +29,8 @@ def _env_bool(value: str | None, default: bool = False) -> bool:
     """Parse truthy/falsy strings into bool with a safe default. Handles bool input explicitly."""
     if value is None:
         return default
-
+    if isinstance(value, bool):
+        return value
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -109,7 +110,7 @@ def wp_read_apidef():
         try:
             api_definition = data.decode("utf-8")
         except UnicodeDecodeError as e:
-            raise ValueError(
+                f"Failed to decode wattpilot.yaml as UTF-8: {str(e)}"
                 f"Failed to decode wattpilot.yaml as UTF-8: {str(e)}. "
             ) from e
     wpdef = {
