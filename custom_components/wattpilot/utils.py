@@ -213,7 +213,7 @@ async def async_PropertyUpdateHandler(
             )
     except Exception:
         _LOGGER.exception(
-            "%s - PropertyUpdateHandler: Could not execute async",
+            "%s - async_PropertyUpdateHandler: Could not execute async",
             entry_id,
         )
 

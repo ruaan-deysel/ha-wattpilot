@@ -7,7 +7,7 @@ import datetime
 import functools
 import logging
 import time
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from homeassistant.const import (
     CONF_API_KEY,
@@ -390,7 +390,7 @@ async def async_service_ReConnectCharger(
         _LOGGER.info(
             "%s - async_service_ReConnectCharger: Charger reconnected: %s",
             DOMAIN,
-            charger.name,  # type: ignore[attr-defined]
+            charger.name,
         )
         return True
 
