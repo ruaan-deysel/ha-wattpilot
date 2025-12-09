@@ -1,7 +1,7 @@
 {
   "domain": "wattpilot",
   "name": "Fronius Wattpilot",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "integration_type": "device",
   "config_flow": true,
   "documentation": "https://github.com/ruaan-deysel/ha-wattpilot",

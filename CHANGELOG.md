@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] - 2025-12-08
 
+## [0.4.2] - 2025-12-09
+
+### Added
+
+- Thin schema validation for `wattpilot.yaml` on shell startup to fail fast when definitions are malformed.
+- MQTT client disconnect handler with retry/backoff in `wattpilotshell`.
+
+### Changed
+
+- `wattpilotshell` now parses boolean env vars (e.g. `WATTPILOT_SPLIT_PROPERTIES`) correctly, replaces `exit()` with typed exceptions, and improves logging setup without overriding existing handlers.
+- Resource loading uses `importlib.resources` with a pkgutil fallback; package data now ships `wattpilot/resources/wattpilot.yaml` for pip installs.
+- Additional guards around MQTT property set commands and child property resolution to avoid crashes on missing data.
+
 ## [0.4.1] - 2025-12-09
 
 ### Added
