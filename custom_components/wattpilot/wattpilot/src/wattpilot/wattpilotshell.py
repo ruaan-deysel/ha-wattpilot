@@ -110,7 +110,6 @@ def wp_read_apidef():
             api_definition = data.decode("utf-8")
         except UnicodeDecodeError as e:
             raise ValueError(
-                f"Failed to decode wattpilot.yaml as UTF-8: {e.reason}. "
                 f"Failed to decode wattpilot.yaml as UTF-8: {str(e)}. "
             ) from e
     wpdef = {
@@ -1087,7 +1086,7 @@ def mqtt_set_value(client, userdata, message):
     if pd is None:
         _LOGGER.warning(f"Unknown property '{name}'")
         return
-    if pd.get("rw") == "R":
+
     if pd.get("rw", "R") == "R":
         _LOGGER.warning(f"Property '{name}' is not writable")
     value = mqtt_get_decoded_property(pd, str(message.payload.decode("utf-8")))
@@ -1429,10 +1428,11 @@ def main():
         level = WATTPILOT_DEBUG_LEVEL
     else:
         level_name = str(WATTPILOT_DEBUG_LEVEL).upper()
-        if hasattr(logging, level_name) and isinstance(
+
         level_attr = getattr(logging, level_name, None)
         if isinstance(level_attr, int):
             level = level_attr
+        else:
             _LOGGER.warning(
                 "Invalid log level '%s' for WATTPILOT_DEBUG_LEVEL; using INFO instead.",
                 WATTPILOT_DEBUG_LEVEL,
