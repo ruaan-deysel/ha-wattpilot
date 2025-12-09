@@ -493,7 +493,7 @@ sensor:
     description: "Energy in Wh since car connected"
     icon: "mdi:ev-station"
     device_class: energy
-    state_class: total_increasing
+    state_class: total
     unit_of_measurement: "Wh"
     default_state: 0
 
