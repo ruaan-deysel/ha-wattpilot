@@ -110,8 +110,9 @@ def wp_read_apidef():
         try:
             api_definition = data.decode("utf-8")
         except UnicodeDecodeError as e:
-                f"Failed to decode wattpilot.yaml as UTF-8: {str(e)}"
-                f"Failed to decode wattpilot.yaml as UTF-8: {str(e)}. "
+            raise ValueError(
+                f"Failed to decode wattpilot.yaml as UTF-8: {e.reason}. "
+                "This usually means the file is corrupted or not valid UTF-8."
             ) from e
     wpdef = {
         "config": {},
