@@ -7,7 +7,7 @@ import datetime
 import functools
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from homeassistant.const import (
     CONF_API_KEY,
