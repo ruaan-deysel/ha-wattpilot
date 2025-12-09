@@ -33,7 +33,7 @@ setup(
     entry_points={
         "console_scripts": ["wattpilotshell=wattpilot.wattpilotshell:main"],
     },
-    package_data={"": ["wattpilot.yaml"]},
+    package_data={"wattpilot": ["resources/wattpilot.yaml"]},
     python_requires=">=3.10, <4",
     install_requires=["websocket-client", "PyYAML", "paho-mqtt", "cmd2", "bcrypt"],
     platforms="any",

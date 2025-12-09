@@ -3,6 +3,7 @@ import json
 import logging
 import math
 import os
+import importlib.resources as import_resources
 import pkgutil
 import re
 import sys
@@ -10,7 +11,7 @@ from importlib.metadata import version
 from threading import Event
 from time import sleep
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 import paho.mqtt.client as mqtt
 import yaml
@@ -22,6 +23,36 @@ _LOGGER = logging.getLogger(__name__)
 # Global state with type hints
 wp: wattpilot.Wattpilot | None = None
 wpdef: dict = {}
+
+
+def _env_bool(value: str | None, default: bool = False) -> bool:
+    """Parse truthy/falsey strings into bool with a safe default."""
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _validate_apidef(config: Any) -> dict:
+    """Minimal schema validation for wattpilot.yaml to fail fast on malformed content."""
+    if not isinstance(config, dict):
+        raise ValueError("wattpilot.yaml must define a mapping at top level")
+    if "messages" not in config or not isinstance(config["messages"], list):
+        raise ValueError("wattpilot.yaml must contain a list 'messages'")
+    if "properties" not in config or not isinstance(config["properties"], list):
+        raise ValueError("wattpilot.yaml must contain a list 'properties'")
+
+    for msg in config["messages"]:
+        if not isinstance(msg, dict) or "key" not in msg:
+            raise ValueError("Each message entry must be a mapping with a 'key'")
+
+    for prop in config["properties"]:
+        if not isinstance(prop, dict) or "key" not in prop:
+            raise ValueError("Each property entry must be a mapping with a 'key'")
+        child_props = prop.get("childProps", [])
+        if child_props is not None and not isinstance(child_props, list):
+            raise ValueError("'childProps' must be a list when present")
+    return config
+
 
 #### Utility Functions ####
 
@@ -63,8 +94,15 @@ def utils_value2json(value):
 
 def wp_read_apidef():
     global WATTPILOT_SPLIT_PROPERTIES
-
-    api_definition = pkgutil.get_data(__name__, "resources/wattpilot.yaml")
+    try:
+        api_definition = (
+            import_resources.files("wattpilot.resources")
+            .joinpath("wattpilot.yaml")
+            .read_text(encoding="utf-8")
+        )
+    except FileNotFoundError:
+        # Fallback for older packaging setups
+        api_definition = pkgutil.get_data(__name__, "resources/wattpilot.yaml")
     wpdef = {
         "config": {},
         "messages": {},
@@ -72,7 +110,7 @@ def wp_read_apidef():
         "splitProperties": [],
     }
     try:
-        wpdef["config"] = yaml.safe_load(api_definition or "{}")
+        wpdef["config"] = _validate_apidef(yaml.safe_load(api_definition or "{}"))
         wpdef["messages"] = dict(
             zip(
                 [x["key"] for x in wpdef["config"]["messages"]],
@@ -119,14 +157,15 @@ def wp_initialize(host, password):
     wp = wattpilot.Wattpilot(host, password)
     wp.connect()
     # Wait for connection and initialization:
-    assert wp is not None, "Wattpilot connection failed"
+    if wp is None:
+        raise RuntimeError("Wattpilot connection failed")
     wp_instance = cast(wattpilot.Wattpilot, wp)
-    _ = utils_wait_timeout(
-        lambda: wp_instance.connected, WATTPILOT_CONNECT_TIMEOUT
-    ) or exit("ERROR: Timeout while connecting to Wattpilot!")
-    _ = utils_wait_timeout(
+    if not utils_wait_timeout(lambda: wp_instance.connected, WATTPILOT_CONNECT_TIMEOUT):
+        raise TimeoutError("Timeout while connecting to Wattpilot")
+    if not utils_wait_timeout(
         lambda: wp_instance.allPropsInitialized, WATTPILOT_INIT_TIMEOUT
-    ) or exit("ERROR: Timeout while waiting for property initialization!")
+    ):
+        raise TimeoutError("Timeout while waiting for property initialization")
     return wp
 
 
@@ -143,17 +182,20 @@ def wp_get_child_prop_value(cp):
         )
         return None
     ppd = wpdef["properties"][cpd["parentProperty"]]
-    parent_value = wp.allProps[ppd["key"]]
+    parent_value = wp.allProps.get(ppd["key"], None)
     value = None
     if ppd["jsonType"] == "array":
-        value = (
-            parent_value[int(cpd["valueRef"])]
-            if int(cpd["valueRef"]) < len(parent_value)
-            else None
-        )
-        _LOGGER.debug(f"  -> got array value {value}")
+        if parent_value is None:
+            value = None
+            _LOGGER.debug("  -> parent value is None, so child as well")
+        elif int(cpd["valueRef"]) < len(parent_value):
+            value = parent_value[int(cpd["valueRef"])]
+            _LOGGER.debug(f"  -> got array value {value}")
+        else:
+            value = None
+            _LOGGER.debug("  -> valueRef index out of range")
     elif ppd["jsonType"] == "object":
-        if parent_value == None:
+        if parent_value is None:
             value = None
             _LOGGER.debug("  -> parent value is None, so child as well")
         elif (
@@ -808,7 +850,7 @@ class WattpilotShell(cmd.Cmd):
 
 def mqtt_get_mapped_value(pd, value):
     mapped_value = value
-    if value == None:
+    if value is None:
         mapped_value = None
     elif "valueMap" in pd:
         if str(value) in list(pd["valueMap"].keys()):
@@ -860,7 +902,7 @@ def mqtt_get_remapped_property(pd, mapped_value):
 
 def mqtt_get_encoded_property(pd, value):
     mapped_value = mqtt_get_mapped_property(pd, value)
-    if value == None or (
+    if value is None or (
         "jsonType" in pd
         and (
             pd["jsonType"] == "array"
@@ -918,7 +960,7 @@ def mqtt_publish_message(wp, wsapp, msg, msg_json):
     global MQTT_PUBLISH_PROPERTIES
     global MQTT_TOPIC_MESSAGES
     global wpdef
-    if mqtt_client == None:
+    if mqtt_client is None:
         _LOGGER.debug("Skipping MQTT message publishing.")
         return
     msg_dict = json.loads(msg_json)
@@ -956,6 +998,23 @@ def mqtt_setup_client(host, port, client_id, available_topic, command_topic):
     # Connect to MQTT server:
     mqtt_client = mqtt.Client(client_id)
     mqtt_client.on_message = mqtt_set_value
+
+    def _on_disconnect(client, userdata, rc):
+        if rc == 0:
+            _LOGGER.info("MQTT client disconnected cleanly")
+            return
+        _LOGGER.warning("MQTT client disconnected (rc=%s); attempting reconnect", rc)
+        for attempt in range(1, 4):
+            try:
+                client.reconnect()
+                _LOGGER.info("MQTT client reconnected on attempt %s", attempt)
+                return
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("MQTT reconnect attempt %s failed", attempt)
+                sleep(2 * attempt)
+        _LOGGER.error("MQTT client could not reconnect after 3 attempts")
+
+    mqtt_client.on_disconnect = _on_disconnect
     _LOGGER.info(f"Connecting to MQTT host {host} on port {port} ...")
     mqtt_client.will_set(available_topic, payload="offline", qos=0, retain=True)
     mqtt_client.connect(host, port)
@@ -1007,11 +1066,16 @@ def mqtt_set_value(client, userdata, message):
     wp_instance = cast(wattpilot.Wattpilot, wp)
     topic_regex = mqtt_subst_topic(MQTT_TOPIC_PROPERTY_SET, {"propName": "([^/]+)"})
     name = re.sub(topic_regex, r"\1", message.topic)
-    if not name or name == "" or not wpdef["properties"][name]:
+    if not name or name == "":
+        _LOGGER.warning("MQTT message without property name")
+        return
+    pd = wpdef["properties"].get(name)
+    if pd is None:
         _LOGGER.warning(f"Unknown property '{name}'!")
-    pd = wpdef["properties"][name]
-    if pd["rw"] == "R":
+        return
+    if pd.get("rw") == "R":
         _LOGGER.warning(f"Property '{name}' is not writable!")
+        return
     value = mqtt_get_decoded_property(pd, str(message.payload.decode("utf-8")))
     _LOGGER.info(
         f"MQTT Message received: topic={message.topic}, name={name}, value={value}"
@@ -1325,8 +1389,8 @@ def main_setup_env():
     WATTPILOT_HOST = os.environ.get("WATTPILOT_HOST", "")
     WATTPILOT_INIT_TIMEOUT = int(os.environ.get("WATTPILOT_INIT_TIMEOUT", "30"))
     WATTPILOT_PASSWORD = os.environ.get("WATTPILOT_PASSWORD", "")
-    WATTPILOT_SPLIT_PROPERTIES = bool(
-        os.environ.get("WATTPILOT_SPLIT_PROPERTIES", "true")
+    WATTPILOT_SPLIT_PROPERTIES = _env_bool(
+        os.environ.get("WATTPILOT_SPLIT_PROPERTIES", "true"), True
     )
 
     # Ensure wattpilot host an password are set:
@@ -1347,7 +1411,15 @@ def main():
     main_setup_env()
 
     # Set debug level:
-    logging.basicConfig(level=WATTPILOT_DEBUG_LEVEL)
+    level = getattr(logging, str(WATTPILOT_DEBUG_LEVEL).upper(), logging.INFO)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+    if not root_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setLevel(level)
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+        handler.setFormatter(formatter)
+        root_logger.addHandler(handler)
 
     # Initialize globals:
     mqtt_client = None
