@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Final
+from typing import Any, Final
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -72,7 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
     # Connect to the charger
     try:
         _LOGGER.debug("%s - async_setup_entry: Connecting charger", entry.entry_id)
-        charger = await async_ConnectCharger(entry.entry_id, entry.data)
+        charger: Any = await async_ConnectCharger(entry.entry_id, dict(entry.data))
         if not charger:
             raise ConfigEntryNotReady(
                 f"Failed to connect to charger for entry {entry.entry_id}"
