@@ -149,9 +149,7 @@ class ChargerSelect(ChargerPlatformEntity, SelectEntity):
         if isinstance(self._opt_identifier, dict):
             self._opt_dict = self._opt_identifier
         elif self._opt_identifier is not None:
-            self._opt_dict = getattr(
-                self._charger, self._opt_identifier, STATE_UNKNOWN
-            )
+            self._opt_dict = getattr(self._charger, self._opt_identifier, STATE_UNKNOWN)
         else:
             self._opt_dict = STATE_UNKNOWN
         if isinstance(self._opt_dict, dict):

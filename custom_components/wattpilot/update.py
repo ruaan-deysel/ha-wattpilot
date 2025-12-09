@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import aiofiles
 import yaml
@@ -161,7 +162,7 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
 
     _state_attr = "_attr_latest_version"
     _dummy_version = "0.0.1"
-    _available_versions: ClassVar[dict[str, str]] = {}
+    _available_versions: dict[str, str] = {}
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
@@ -245,10 +246,11 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
             return {}
 
     async def async_install(
-        self, version: str | None, *, backup: bool, **_: Any
+        self, version: str | None, *, backup: bool, **kwargs: Any
     ) -> None:
         """Trigger update install."""
         _ = backup
+        _ = kwargs
         try:
             _LOGGER.debug(
                 "%s - %s: async_install: update charger to: %s",
@@ -258,7 +260,10 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
             )
             if version is None:
                 version = self._attr_latest_version
-            v_name = self._available_versions.get(version, None)
+            if version is not None:
+                v_name = self._available_versions.get(version, None)
+            else:
+                v_name = None
             if v_name is None:
                 _LOGGER.error(
                     "%s - %s: async_install failed: version (%s) not in available: %s",
@@ -338,7 +343,9 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
             self._charger, self._identifier_installed, None
         )
         state = await self.hass.async_add_executor_job(
-            self._update_available_versions, state, return_latest=True
+            functools.partial(
+                self._update_available_versions, state, return_latest=True
+            )
         )
         _LOGGER.debug(
             "%s - %s: _async_update_validate_platform_state: state: %s",

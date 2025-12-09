@@ -7,7 +7,7 @@ import datetime
 import functools
 import logging
 import time
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from homeassistant.const import (
     CONF_API_KEY,
@@ -144,14 +144,14 @@ async def async_service_SetGoECloud(hass: HomeAssistant, call: ServiceCall) -> N
                 DOMAIN,
                 CONF_DEVICE_ID,
             )
-            return None
+            return
         if api_state is None:
             _LOGGER.error(
                 "%s - async_service_SetGoECloud: %s is a required parameter",
                 DOMAIN,
                 CONF_CLOUD_API,
             )
-            return None
+            return
         _LOGGER.debug(
             "%s - async_service_SetGoECloud: service call data: %s", DOMAIN, call.data
         )
@@ -168,7 +168,7 @@ async def async_service_SetGoECloud(hass: HomeAssistant, call: ServiceCall) -> N
                 DOMAIN,
                 CONF_DEVICE_ID,
             )
-            return None
+            return
 
         _LOGGER.debug(
             "%s - async_service_SetGoECloud: get charger for device_id: %s",
@@ -182,12 +182,12 @@ async def async_service_SetGoECloud(hass: HomeAssistant, call: ServiceCall) -> N
                 DOMAIN,
                 CONF_DEVICE_ID,
             )
-            return None
+            return
 
         if api_state is True:
             _LOGGER.debug("%s - async_service_SetGoECloud: Enabling cloud api", DOMAIN)
             if not await async_SetChargerProp(charger, "cae", True):
-                return False
+                return
             timer = 0
             timeout = 10
             while timeout > timer and (charger.cak == "" or charger.cak is None):
@@ -200,7 +200,7 @@ async def async_service_SetGoECloud(hass: HomeAssistant, call: ServiceCall) -> N
                     timeout,
                 )
                 entry_data[CONF_API_KEY] = False
-                return None
+                return
 
             _LOGGER.debug(
                 "%s - async_service_SetGoECloud: Saving api key to data store", DOMAIN
@@ -336,7 +336,7 @@ async def async_service_ReConnectCharger(
                 DOMAIN,
                 CONF_DEVICE_ID,
             )
-            return None
+            return False
         _LOGGER.debug(
             "%s - async_service_ReConnectCharger: service call data: %s",
             DOMAIN,
@@ -383,15 +383,14 @@ async def async_service_ReConnectCharger(
             await asyncio.sleep(1)
 
         _LOGGER.debug("%s - async_service_ReConnectCharger: Connecting charger", DOMAIN)
-        charger = await async_ConnectCharger(
-            device_id, entry_data[CONF_PARAMS], charger
-        )
-        if charger is False:
+        result = await async_ConnectCharger(device_id, entry_data[CONF_PARAMS], charger)
+        if result is False or result is None:
             return False
+        charger = cast("Any", result)
         _LOGGER.info(
             "%s - async_service_ReConnectCharger: Charger reconnected: %s",
             DOMAIN,
-            charger.name,
+            charger.name,  # type: ignore[attr-defined]
         )
         return True
 
