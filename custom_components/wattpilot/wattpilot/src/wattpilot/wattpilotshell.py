@@ -103,7 +103,9 @@ def wp_read_apidef():
     except FileNotFoundError:
         # Fallback for older packaging setups
         data = pkgutil.get_data(__name__, "resources/wattpilot.yaml")
-        api_definition = data.decode("utf-8") if data else None
+        if data is None:
+            raise FileNotFoundError("Could not load wattpilot.yaml")
+        api_definition = data.decode("utf-8")
     wpdef = {
         "config": {},
         "messages": {},
@@ -1076,7 +1078,7 @@ def mqtt_set_value(client, userdata, message):
         return
     pd = wpdef["properties"].get(name)
     if pd is None:
-        _LOGGER.warning(f"Unknown property '{name}'")
+        _LOGGER.warning(f"Unknown property {name}")
         return
     if pd.get("rw") == "R":
         _LOGGER.warning(f"Property {name} is not writable")
@@ -1416,7 +1418,11 @@ def main():
     main_setup_env()
 
     # Set debug level:
-    level = getattr(logging, str(WATTPILOT_DEBUG_LEVEL).upper(), logging.INFO)
+    level = (
+        WATTPILOT_DEBUG_LEVEL
+        if isinstance(WATTPILOT_DEBUG_LEVEL, int)
+        else getattr(logging, str(WATTPILOT_DEBUG_LEVEL).upper(), logging.INFO)
+    )
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
     # Only add a StreamHandler if one does not already exist (prevent duplicates when imported as module)
