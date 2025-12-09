@@ -10,11 +10,8 @@ from typing import TYPE_CHECKING, Any, Final
 
 import aiofiles
 import yaml
-from homeassistant.components.sensor import (
-    UNIT_CONVERTERS,
-    SensorEntity,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor.const import UNIT_CONVERTERS
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 
@@ -160,11 +157,13 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
                 "unit_of_measurement", None
             )
         if self._entity_cfg.get("state_class", None) is not None:
-            self._attr_state_class = SensorStateClass(
-                (self._entity_cfg.get("state_class")).lower()
-            )
+            state_class = self._entity_cfg.get("state_class")
+            if state_class is not None:
+                self._attr_state_class = SensorStateClass(state_class.lower())
         if self._entity_cfg.get("enum", None) is not None:
-            self._state_enum = dict(self._entity_cfg.get("enum", None))
+            enum_data = self._entity_cfg.get("enum")
+            if enum_data is not None:
+                self._state_enum = dict(enum_data)
         if self._entity_cfg.get("html_unescape", None) is not None:
             self._html_unescape = True
 
