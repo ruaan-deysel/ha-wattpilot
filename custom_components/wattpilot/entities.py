@@ -9,10 +9,12 @@ from typing import TYPE_CHECKING, Any, Final
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
+    EntityCategory,
     STATE_UNKNOWN,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo, Entity, EntityCategory
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
 from packaging.version import Version
 
 from .const import (
@@ -245,7 +247,7 @@ class ChargerPlatformEntity(Entity):
     @property
     def description(self) -> str | None:
         """Return the description of the entity."""
-        return self._description
+        return self._attributes.get("description", None)
 
     @property
     def entity_category(self) -> EntityCategory | None:
@@ -446,7 +448,7 @@ class ChargerPlatformEntity(Entity):
                     self._entity_cfg.get("value_id", STATE_UNKNOWN),
                     STATE_UNKNOWN,
                 )
-                for attr_id in self._entity_cfg.get("attribute_ids", None):
+                for attr_id in self._entity_cfg.get("attribute_ids", []):
                     self._attributes[attr_id] = getattr(
                         namespace, attr_id, STATE_UNKNOWN
                     )
@@ -460,7 +462,7 @@ class ChargerPlatformEntity(Entity):
                         i = i + 1
                 else:
                     state = state_list[int(self._entity_cfg.get("value_id", 0))]
-                    for attr_entry in self._entity_cfg.get("attribute_ids", None):
+                    for attr_entry in self._entity_cfg.get("attribute_ids", []):
                         attr_id = attr_entry.split(":")[0]
                         attr_index = attr_entry.split(":")[1]
                         self._attributes[attr_id] = state_list[int(attr_index)]
