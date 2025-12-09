@@ -7,7 +7,7 @@ import datetime
 import functools
 import logging
 import time
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from homeassistant.const import (
     CONF_API_KEY,
@@ -16,7 +16,6 @@ from homeassistant.const import (
     CONF_PARAMS,
     CONF_TRIGGER_TIME,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
 
 from .const import (
     CLOUD_API_URL_POSTFIX,
@@ -32,6 +31,9 @@ from .utils import (
     async_GetDataStoreFromDeviceID,
     async_SetChargerProp,
 )
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant, ServiceCall
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -285,14 +287,23 @@ async def async_service_SetDebugProperties(
             )
             return
 
+        runtime_data = entry_data.get("runtime_data", None)
+        if runtime_data is None:
+            _LOGGER.error(
+                "%s - async_service_SetDebugProperties: runtime_data missing for: %s",
+                DOMAIN,
+                CONF_DEVICE_ID,
+            )
+            return
+
         if isinstance(dbg_state, bool):
-            entry_data[CONF_DBG_PROPS] = dbg_state
+            runtime_data.debug_properties = dbg_state
         elif isinstance(dbg_state, str) and dbg_state.lower() == "true":
-            entry_data[CONF_DBG_PROPS] = True
+            runtime_data.debug_properties = True
         elif isinstance(dbg_state, str) and dbg_state.lower() == "false":
-            entry_data[CONF_DBG_PROPS] = False
+            runtime_data.debug_properties = False
         elif isinstance(dbg_state, list):
-            entry_data[CONF_DBG_PROPS] = dbg_state
+            runtime_data.debug_properties = dbg_state
         else:
             _LOGGER.error(
                 "%s - async_service_SetDebugProperties: invalid debug state: %s (%s)",

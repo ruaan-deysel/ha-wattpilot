@@ -226,20 +226,11 @@ class ChargerPlatformEntity(Entity):
         c_tst = self._entity_cfg.get("connection", None)
         if c_tst is None:
             return True
-        # Use runtime_data if available, fallback to hass.data for compatibility
-        if (
-            hasattr(self._entry, "runtime_data")
-            and self._entry.runtime_data is not None
-        ):
-            connection = STATE_UNKNOWN
-        else:
-            entry_data = self.hass.data.get(DOMAIN, {}).get(self._entry.entry_id, None)
-            if entry_data is None:
-                return True
-            config_params = entry_data.get("params", None)
-            if config_params is None:
-                return True
-            connection = config_params.get(CONF_CONNECTION, STATE_UNKNOWN)
+        runtime_data = getattr(self._entry, "runtime_data", None)
+        if runtime_data is None:
+            return True
+        config_params = runtime_data.params or {}
+        connection = config_params.get(CONF_CONNECTION, STATE_UNKNOWN)
         v = str(connection).upper() == str(c_tst).upper()
         _LOGGER.debug(
             "%s - %s: _check_connection_supported complete (%s=%s -> %s)",
@@ -354,20 +345,16 @@ class ChargerPlatformEntity(Entity):
             return True
         if self._source == "namespacelist":
             return True
-        if getattr(self, self._state_attr, STATE_UNKNOWN) == self._entity_cfg.get(
+        return getattr(self, self._state_attr, STATE_UNKNOWN) == self._entity_cfg.get(
             "default_state", STATE_UNKNOWN
-        ):
-            return True
-        return False
+        )
 
     @property
     def entity_registry_enabled_default(self) -> bool:
         """Return False if the entity should be disable by default."""
         try:
             enabled = self._entity_cfg.get("enabled", True)
-            if enabled is False or str(enabled).lower() == "false":
-                return False
-            return True
+            return enabled is not False and str(enabled).lower() != "false"
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: entity_registry_enabled_default failed - default enable: %s (%s.%s)",
@@ -419,7 +406,7 @@ class ChargerPlatformEntity(Entity):
                     self._charger_id,
                     self._identifier,
                 )
-                await self.hass.async_create_task(self.async_local_poll())
+                await self.async_local_poll()
             else:
                 _LOGGER.debug(
                     "%s - %s: async_update is done via push - do nothing / wait for push event",

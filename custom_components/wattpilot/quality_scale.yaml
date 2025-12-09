@@ -1,0 +1,13 @@
+tier: bronze
+rules:
+  - runtime-data
+  - has-entity-name
+  - entity-unique-id
+  - unique-config-entry
+  - config-flow
+  - test-before-setup
+  - entity-event-setup
+  - action-setup
+notes:
+  - Services are registered once at integration setup.
+  - Data updates are push-based (iot_class: local_push); runtime_data holds charger/push_entities/params.

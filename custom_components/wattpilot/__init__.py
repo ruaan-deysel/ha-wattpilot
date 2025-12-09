@@ -31,10 +31,20 @@ from .utils import (
 
 _LOGGER: Final = logging.getLogger(__name__)
 
+_SERVICES_REGISTERED: bool = False
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up via YAML (kept for service registration)."""
+    await _ensure_services_registered(hass)
+    return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) -> bool:
     """Set up a charger from the config entry."""
     _LOGGER.debug("Setting up config entry: %s", entry.entry_id)
+
+    await _ensure_services_registered(hass)
 
     try:
         integration = await async_get_integration(hass, DOMAIN)
@@ -153,7 +163,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
         ):
             charger.register_property_callback(
                 lambda identifier, value: PropertyUpdateHandler(
-                    hass, entry.entry_id, identifier, value
+                    hass, entry, identifier, value
                 )
             )
         elif hasattr(charger, "add_event_handler") and callable(
@@ -161,7 +171,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
         ):
             entry.runtime_data.property_updates_callback = (
                 lambda _, identifier, value: PropertyUpdateHandler(
-                    hass, entry.entry_id, identifier, value
+                    hass, entry, identifier, value
                 )
             )
             charger.add_event_handler(
@@ -186,9 +196,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
             f"Failed to register property update handler: {e}"
         ) from e
 
-    # Register services
+    _LOGGER.debug("%s - async_setup_entry: Completed", entry.entry_id)
+    return True
+
+
+async def _ensure_services_registered(hass: HomeAssistant) -> None:
+    """Register integration-wide services once."""
+    global _SERVICES_REGISTERED
+    if _SERVICES_REGISTERED:
+        return
     try:
-        _LOGGER.debug("%s - async_setup_entry: register services", entry.entry_id)
+        _LOGGER.debug("%s - register services", DOMAIN)
         await async_registerService(
             hass, "disconnect_charger", async_service_DisconnectCharger
         )
@@ -200,19 +218,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
             hass, "set_debug_properties", async_service_SetDebugProperties
         )
         await async_registerService(hass, "set_next_trip", async_service_SetNextTrip)
+        _SERVICES_REGISTERED = True
     except Exception as e:
         _LOGGER.error(
-            "%s - async_setup_entry: register services failed: %s (%s.%s)",
-            entry.entry_id,
+            "%s - register services failed: %s (%s.%s)",
+            DOMAIN,
             str(e),
             e.__class__.__module__,
             type(e).__name__,
         )
-        await async_DisconnectCharger(entry.entry_id, charger)
         raise ConfigEntryNotReady(f"Failed to register services: {e}") from e
-
-    _LOGGER.debug("%s - async_setup_entry: Completed", entry.entry_id)
-    return True
 
 
 async def options_update_listener(
@@ -226,7 +241,8 @@ async def options_update_listener(
         )
 
         _LOGGER.debug("%s - options_update_listener: set new options", entry.entry_id)
-        entry.runtime_data.params = dict(entry.options)
+        new_params = dict(entry.options)
+        entry.runtime_data.params = new_params
         hass.config_entries.async_update_entry(entry, data=entry.options)
 
         _LOGGER.debug(

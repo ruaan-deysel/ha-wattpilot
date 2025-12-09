@@ -190,14 +190,11 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
                 )
                 state = STATE_ON
             return state
-        except Exception as e:
-            _LOGGER.error(
-                "%s - %s: _async_update_validate_platform_state failed: %s (%s.%s)",
+        except Exception:
+            _LOGGER.exception(
+                "%s - %s: _async_update_validate_platform_state failed",
                 self._charger_id,
                 self._identifier,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
             )
             return None
 
@@ -208,7 +205,7 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
             return None
         return self._internal_state == STATE_ON
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(self, **_: Any) -> None:
         """Async: Turn entity on."""
         try:
             _LOGGER.debug(
@@ -219,17 +216,12 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
             )
             value = not self._entity_cfg.get("invert", False)
             await async_SetChargerProp(self._charger, self._identifier, value)
-        except Exception as e:
-            _LOGGER.error(
-                "%s - %s: async_turn_on failed: %s (%s.%s)",
-                self._charger_id,
-                self._identifier,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
+        except Exception:
+            _LOGGER.exception(
+                "%s - %s: async_turn_on failed", self._charger_id, self._identifier
             )
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **_: Any) -> None:
         """Async: Turn entity off."""
         try:
             _LOGGER.debug(
@@ -240,12 +232,7 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
             )
             value = self._entity_cfg.get("invert", False)
             await async_SetChargerProp(self._charger, self._identifier, value)
-        except Exception as e:
-            _LOGGER.error(
-                "%s - %s: async_turn_off failed: %s (%s.%s)",
-                self._charger_id,
-                self._identifier,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
+        except Exception:
+            _LOGGER.exception(
+                "%s - %s: async_turn_off failed", self._charger_id, self._identifier
             )

@@ -6,6 +6,10 @@ target-version = "py313"
 select = [
     "ALL",
 ]
+exclude = [
+    "custom_components/wattpilot/wattpilot/**",
+    "set_values_test.py",
+]
 
 ignore = [
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
@@ -13,6 +17,33 @@ ignore = [
     "D212", # multi-line-summary-first-line (incompatible with formatter)
     "COM812", # incompatible with formatter
     "ISC001", # incompatible with formatter
+    "N802", # Function name should be lowercase (legacy API convention)
+    "FBT001", # Boolean-typed positional argument (service callback pattern)
+    "FBT002", # Boolean default positional argument
+    "FBT003", # Boolean positional value in function call (legacy pattern)
+    "BLE001", # Do not catch blind exception (legacy exception handling)
+    "SLF001", # Private member accessed (workaround for wattpilot library)
+    "PLR0911", # Too many return statements (service pattern)
+    "E501", # Line too long (acceptable for log messages and complex calls)
+    "TRY300", # Consider moving return outside try block (acceptable pattern)
+    "TRY003", # Avoid specifying long messages outside exception class
+    "EM102", # Exception f-string literal
+    "TC002", # Move third-party import into TYPE_CHECKING (safe for backwards compat)
+    "DTZ007", # Naive datetime constructed (acceptable for utility calculations)
+    "RUF012", # Mutable class attributes should use ClassVar (rare occurrence)
+    "TRY400", # Use logging.exception (legacy pattern in platform files)
+    "D400", # First line should end with period (formatting preference)
+    "D415", # First line should end with period (formatting preference)
+    "D401", # First line imperative mood (formatting preference)
+    "ANN201", # Missing return type (implicit from context)
+    "ANN001", # Missing arg type (implicit from context)
+    "ARG001", # Unused function argument (callback patterns)
+    "N806", # Variable lowercase (schema variable names)
+    "TC001", # Move import to TYPE_CHECKING (runtime needed)
+    "PLR0915", # Too many statements (large setup function)
+    "PLR0912", # Too many branches (complex branching logic)
+    "TRY301", # Abstract raise (acceptable for config entry)
+    "PLW0603", # Global statement (service registration flag)
 ]
 
 [lint.flake8-pytest-style]

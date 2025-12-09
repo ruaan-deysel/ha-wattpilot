@@ -6,7 +6,7 @@ import asyncio
 import logging
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 import aiofiles
 import yaml
@@ -15,15 +15,12 @@ from homeassistant.components.update import (
     UpdateEntityFeature,
 )
 from homeassistant.const import (
-    CONF_PARAMS,
     CONF_TIMEOUT,
 )
-from homeassistant.core import HomeAssistant
 from packaging.version import Version
 
 from .const import (
     DEFAULT_TIMEOUT,
-    DOMAIN,
 )
 from .entities import ChargerPlatformEntity
 from .utils import (
@@ -32,6 +29,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
     from .types import WattpilotConfigEntry
@@ -58,14 +56,12 @@ async def async_setup_entry(
         yaml_path = Path(__file__).parent / f"{PLATFORM}.yaml"
         async with aiofiles.open(yaml_path) as y:
             yaml_cfg = yaml.safe_load(await y.read())
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
+    except Exception:
+        _LOGGER.exception(
+            "%s - async_setup_entry %s: reading %s.yaml failed",
             entry.entry_id,
             PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
+            PLATFORM,
         )
         return
 
@@ -76,14 +72,11 @@ async def async_setup_entry(
             PLATFORM,
         )
         charger = entry.runtime_data.charger
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data failed: %s (%s.%s)",
+    except Exception:
+        _LOGGER.exception(
+            "%s - async_setup_entry %s: getting charger from runtime_data failed",
             entry.entry_id,
             PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
         )
         return
 
@@ -94,14 +87,11 @@ async def async_setup_entry(
             PLATFORM,
         )
         push_entities = entry.runtime_data.push_entities
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data failed: %s (%s.%s)",
+    except Exception:
+        _LOGGER.exception(
+            "%s - async_setup_entry %s: getting push entities dict failed",
             entry.entry_id,
             PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
         )
         return
 
@@ -118,7 +108,7 @@ async def async_setup_entry(
                 continue
             if "id_installed" not in entity_cfg or entity_cfg["id_installed"] is None:
                 _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no id_installed: %s",
+                    "%s - async_setup_entry %s: invalid yaml - missing id_installed: %s",
                     entry.entry_id,
                     PLATFORM,
                     entity_cfg,
@@ -126,7 +116,7 @@ async def async_setup_entry(
                 continue
             if "id_trigger" not in entity_cfg or entity_cfg["id_trigger"] is None:
                 _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no id_trigger: %s",
+                    "%s - async_setup_entry %s: invalid yaml - missing id_trigger: %s",
                     entry.entry_id,
                     PLATFORM,
                     entity_cfg,
@@ -134,7 +124,7 @@ async def async_setup_entry(
                 continue
             if "source" not in entity_cfg or entity_cfg["source"] is None:
                 _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no source: %s",
+                    "%s - async_setup_entry %s: invalid yaml - missing source: %s",
                     entry.entry_id,
                     PLATFORM,
                     entity_cfg,
@@ -147,14 +137,11 @@ async def async_setup_entry(
             if entity._source == "property":
                 push_entities[entity._identifier] = entity
             await asyncio.sleep(0)
-        except Exception as e:
-            _LOGGER.error(
-                "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
+        except Exception:
+            _LOGGER.exception(
+                "%s - async_setup_entry %s: entity creation failed",
                 entry.entry_id,
                 PLATFORM,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
             )
             return
 
@@ -174,7 +161,7 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
 
     _state_attr = "_attr_latest_version"
     _dummy_version = "0.0.1"
-    _available_versions: dict[str, str] = {}
+    _available_versions: ClassVar[dict[str, str]] = {}
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
@@ -202,7 +189,7 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
         )
 
     def _update_available_versions(
-        self, v_list: list[str] | str | None = None, return_latest: bool = False
+        self, v_list: list[str] | str | None = None, *, return_latest: bool = False
     ) -> str | None:
         """Get the latest update version of available versions."""
         _LOGGER.debug(
@@ -225,14 +212,11 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
             latest = list(self._available_versions.keys())
             latest.sort(key=Version)
             return latest[-1]
-        except Exception as e:
-            _LOGGER.error(
-                "%s - %s: _update_available_versions failed: %s (%s.%s)",
+        except Exception:
+            _LOGGER.exception(
+                "%s - %s: _update_available_versions failed",
                 self._charger_id,
                 self._identifier,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
             )
             if return_latest:
                 return self._dummy_version
@@ -252,21 +236,19 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
                 )
                 versions[c] = v
             return versions
-        except Exception as e:
-            _LOGGER.error(
-                "%s - %s: _get_versions_dict failed: %s (%s.%s)",
+        except Exception:
+            _LOGGER.exception(
+                "%s - %s: _get_versions_dict failed",
                 self._charger_id,
                 self._identifier,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
             )
             return {}
 
     async def async_install(
-        self, version: str | None, backup: bool, **kwargs: Any
+        self, version: str | None, *, backup: bool, **_: Any
     ) -> None:
         """Trigger update install."""
+        _ = backup
         try:
             _LOGGER.debug(
                 "%s - %s: async_install: update charger to: %s",
@@ -303,11 +285,10 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
 
             # Get timeout from config
             timeout = DEFAULT_TIMEOUT
-            entry_data = self.hass.data.get(DOMAIN, {}).get(self._entry.entry_id, None)
-            if entry_data is not None:
-                config_params = entry_data.get(CONF_PARAMS, None)
-                if config_params is not None:
-                    timeout = config_params.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
+            runtime_data = getattr(self._entry, "runtime_data", None)
+            if runtime_data is not None:
+                config_params = runtime_data.params or {}
+                timeout = config_params.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
             timeout = timeout * 4
 
             timer = 0
@@ -316,7 +297,7 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
                 timer += 1
             if self._charger.connected:
                 _LOGGER.error(
-                    "%s - %s: async_install: update timeout during update install: %s seconds",
+                    "%s - %s: async_install: timeout during update install: %s sec",
                     self._charger_id,
                     self._identifier,
                     timeout,
@@ -333,20 +314,15 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
                 timer += 1
             if not self._charger.connected:
                 _LOGGER.error(
-                    "%s - %s: async_install: update timeout during charger restart: %s seconds",
+                    "%s - %s: async_install: timeout during charger restart: %s sec",
                     self._charger_id,
                     self._identifier,
                     timeout,
                 )
                 return
-        except Exception as e:
-            _LOGGER.error(
-                "%s - %s: async_install failed: %s (%s.%s)",
-                self._charger_id,
-                self._identifier,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
+        except Exception:
+            _LOGGER.exception(
+                "%s - %s: async_install failed", self._charger_id, self._identifier
             )
 
     async def _async_update_validate_platform_state(
@@ -362,7 +338,7 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
             self._charger, self._identifier_installed, None
         )
         state = await self.hass.async_add_executor_job(
-            self._update_available_versions, state, True
+            self._update_available_versions, state, return_latest=True
         )
         _LOGGER.debug(
             "%s - %s: _async_update_validate_platform_state: state: %s",
