@@ -29,8 +29,7 @@ def _env_bool(value: str | None, default: bool = False) -> bool:
     """Parse truthy/falsy strings into bool with a safe default. Handles bool input explicitly."""
     if value is None:
         return default
-    if isinstance(value, bool):
-        return value
+
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -112,7 +111,7 @@ def wp_read_apidef():
         except UnicodeDecodeError as e:
             raise ValueError(
                 f"Failed to decode wattpilot.yaml as UTF-8: {e.reason}. "
-                "This usually means the file is corrupted or not valid UTF-8."
+                f"Failed to decode wattpilot.yaml as UTF-8: {str(e)}. "
             ) from e
     wpdef = {
         "config": {},
@@ -1089,8 +1088,8 @@ def mqtt_set_value(client, userdata, message):
         _LOGGER.warning(f"Unknown property '{name}'")
         return
     if pd.get("rw") == "R":
-        _LOGGER.warning(f"Property {name} is not writable")
-        return
+    if pd.get("rw", "R") == "R":
+        _LOGGER.warning(f"Property '{name}' is not writable")
     value = mqtt_get_decoded_property(pd, str(message.payload.decode("utf-8")))
     _LOGGER.info(
         f"MQTT Message received: topic={message.topic}, name={name}, value={value}"
@@ -1431,10 +1430,9 @@ def main():
     else:
         level_name = str(WATTPILOT_DEBUG_LEVEL).upper()
         if hasattr(logging, level_name) and isinstance(
-            getattr(logging, level_name), int
-        ):
-            level = getattr(logging, level_name)
-        else:
+        level_attr = getattr(logging, level_name, None)
+        if isinstance(level_attr, int):
+            level = level_attr
             _LOGGER.warning(
                 "Invalid log level '%s' for WATTPILOT_DEBUG_LEVEL; using INFO instead.",
                 WATTPILOT_DEBUG_LEVEL,
