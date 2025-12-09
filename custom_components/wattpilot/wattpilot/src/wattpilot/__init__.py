@@ -702,7 +702,7 @@ class Wattpilot:
             )
         else:
             self._url = "ws://" + ip + "/ws"
-        self.serial = None
+        self.serial = serial
         self._connected = False
         self._allProps = {}
         self._allPropsInitialized = False
