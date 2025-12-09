@@ -512,8 +512,6 @@ async def async_ConnectCharger(
             entry_or_device_id,
             charger_id,
         )
-        if charger is None:
-            return False
         timer = 0
         timeout = data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
         while timeout > timer and not (
