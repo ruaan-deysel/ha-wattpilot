@@ -148,11 +148,11 @@ class ChargerSelect(ChargerPlatformEntity, SelectEntity):
         self._opt_identifier = self._entity_cfg.get("options", None)
         if isinstance(self._opt_identifier, dict):
             self._opt_dict = self._opt_identifier
+        elif self._opt_identifier is not None:
+            self._opt_dict = getattr(self._charger, self._opt_identifier, STATE_UNKNOWN)
         else:
-            self._opt_dict = getattr(
-                self._charger, self._opt_identifier, list(STATE_UNKNOWN)
-            )
-        if self._opt_dict != STATE_UNKNOWN:
+            self._opt_dict = STATE_UNKNOWN
+        if isinstance(self._opt_dict, dict):
             self._attr_options = list(self._opt_dict.values())
 
     async def _async_update_validate_platform_state(
@@ -160,6 +160,8 @@ class ChargerSelect(ChargerPlatformEntity, SelectEntity):
     ) -> str | None:
         """Async: Validate the given state for select specific requirements."""
         try:
+            if not isinstance(self._opt_dict, dict):
+                return None
             if state in list(self._opt_dict.keys()):
                 state = self._opt_dict[state]
             elif state in list(self._opt_dict.values()):
@@ -188,6 +190,13 @@ class ChargerSelect(ChargerPlatformEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Async: Change the selected option."""
         try:
+            if not isinstance(self._opt_dict, dict):
+                _LOGGER.error(
+                    "%s - %s: async_select_option: options dict not available",
+                    self._charger_id,
+                    self._identifier,
+                )
+                return
             key = list(self._opt_dict.keys())[
                 list(self._opt_dict.values()).index(option)
             ]

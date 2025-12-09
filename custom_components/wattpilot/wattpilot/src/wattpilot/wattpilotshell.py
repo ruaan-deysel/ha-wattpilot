@@ -10,6 +10,7 @@ from importlib.metadata import version
 from threading import Event
 from time import sleep
 from types import SimpleNamespace
+from typing import cast
 
 import paho.mqtt.client as mqtt
 import yaml
@@ -18,6 +19,9 @@ import wattpilot
 
 _LOGGER = logging.getLogger(__name__)
 
+# Global state with type hints
+wp: wattpilot.Wattpilot | None = None
+wpdef: dict = {}
 
 #### Utility Functions ####
 
@@ -68,7 +72,7 @@ def wp_read_apidef():
         "splitProperties": [],
     }
     try:
-        wpdef["config"] = yaml.safe_load(api_definition)
+        wpdef["config"] = yaml.safe_load(api_definition or "{}")
         wpdef["messages"] = dict(
             zip(
                 [x["key"] for x in wpdef["config"]["messages"]],
@@ -115,17 +119,23 @@ def wp_initialize(host, password):
     wp = wattpilot.Wattpilot(host, password)
     wp.connect()
     # Wait for connection and initialization:
-    utils_wait_timeout(lambda: wp.connected, WATTPILOT_CONNECT_TIMEOUT) or exit(
-        "ERROR: Timeout while connecting to Wattpilot!"
-    )
-    utils_wait_timeout(lambda: wp.allPropsInitialized, WATTPILOT_INIT_TIMEOUT) or exit(
-        "ERROR: Timeout while waiting for property initialization!"
-    )
+    assert wp is not None, "Wattpilot connection failed"
+    wp_instance = cast(wattpilot.Wattpilot, wp)
+    _ = utils_wait_timeout(
+        lambda: wp_instance.connected, WATTPILOT_CONNECT_TIMEOUT
+    ) or exit("ERROR: Timeout while connecting to Wattpilot!")
+    _ = utils_wait_timeout(
+        lambda: wp_instance.allPropsInitialized, WATTPILOT_INIT_TIMEOUT
+    ) or exit("ERROR: Timeout while waiting for property initialization!")
     return wp
 
 
 def wp_get_child_prop_value(cp):
     global wpdef
+    global wp
+    if wp is None:
+        _LOGGER.error("wp_get_child_prop_value: Wattpilot not initialized")
+        return None
     cpd = wpdef["properties"][cp]
     if "parentProperty" not in cpd:
         _LOGGER.warning(
@@ -152,7 +162,7 @@ def wp_get_child_prop_value(cp):
         ):
             value = parent_value.__dict__[cpd["valueRef"]]
             _LOGGER.debug(f"  -> got object value {value}")
-        elif cpd["valueRef"] in parent_value:
+        elif isinstance(parent_value, dict) and cpd["valueRef"] in parent_value:
             value = parent_value[cpd["valueRef"]]
             _LOGGER.debug(f"  -> got object value {value}")
         else:
@@ -168,6 +178,9 @@ def wp_get_all_props(available_only=True):
     global WATTPILOT_SPLIT_PROPERTIES
     global wp
     global wpdef
+    if wp is None:
+        _LOGGER.error("wp_get_all_props: Wattpilot not initialized")
+        return {}
     if available_only:
         props = {k: v for k, v in wp.allProps.items()}
         if WATTPILOT_SPLIT_PROPERTIES:
@@ -266,11 +279,12 @@ class WattpilotShell(cmd.Cmd):
         args = arg.split(" ")
         if not self._ensure_connected():
             return
+        wp_instance = cast(wattpilot.Wattpilot, wp)
         if len(args) < 1 or arg == "":
             print("ERROR: Wrong number of arguments!")
-        elif args[0] in wp.allProps:
+        elif args[0] in wp_instance.allProps:
             pd = wpdef["properties"][args[0]]
-            print(mqtt_get_encoded_property(pd, wp.allProps[args[0]]))
+            print(mqtt_get_encoded_property(pd, wp_instance.allProps[args[0]]))
         elif args[0] in wpdef["splitProperties"]:
             pd = wpdef["properties"][args[0]]
             print(mqtt_get_encoded_property(pd, wp_get_child_prop_value(pd["key"])))
@@ -577,9 +591,10 @@ class WattpilotShell(cmd.Cmd):
         args = arg.split(" ")
         if not self._ensure_connected():
             return
+        wp_instance = cast(wattpilot.Wattpilot, wp)
         if len(args) < 2 or arg == "":
             print("ERROR: Wrong number of arguments!")
-        elif args[0] not in wp.allProps:
+        elif args[0] not in wp_instance.allProps:
             print(f"ERROR: Unknown property: {args[0]}")
         else:
             if args[1].lower() in ["false", "true"]:
@@ -590,7 +605,7 @@ class WattpilotShell(cmd.Cmd):
                 v = float(args[1])
             else:
                 v = str(args[1])
-            wp.send_update(
+            wp_instance.send_update(
                 args[0], mqtt_get_decoded_property(wpdef["properties"][args[0]], v)
             )
 
@@ -618,6 +633,7 @@ class WattpilotShell(cmd.Cmd):
         args = arg.split(" ")
         if not self._ensure_connected():
             return
+        wp_instance = cast(wattpilot.Wattpilot, wp)
         if len(args) < 2 or arg == "":
             print("ERROR: Wrong number of arguments!")
         elif args[0] == "message" and args[1] not in self.watching_messages:
@@ -625,13 +641,13 @@ class WattpilotShell(cmd.Cmd):
         elif args[0] == "message":
             self.watching_messages.remove(args[1])
             if len(self.watching_messages) == 0:
-                wp.unregister_message_callback()
+                wp_instance.unregister_message_callback()
         elif args[0] == "property" and args[1] not in self.watching_properties:
             print(f"ERROR: Property with name '{args[1]}' is not watched")
         elif args[0] == "property":
             self.watching_properties.remove(args[1])
             if len(self.watching_properties) == 0:
-                wp.unregister_property_callback()
+                wp_instance.unregister_property_callback()
         else:
             print(f"ERROR: Unknown watch type: {args[0]}")
 
@@ -675,6 +691,7 @@ class WattpilotShell(cmd.Cmd):
         args = arg.split(" ")
         if not self._ensure_connected():
             return
+        wp_instance = cast(wattpilot.Wattpilot, wp)
         if len(args) < 2 or arg == "":
             print("ERROR: Wrong number of arguments!")
         elif args[0] == "message" and args[1] not in wpdef["messages"]:
@@ -682,15 +699,15 @@ class WattpilotShell(cmd.Cmd):
         elif args[0] == "message":
             msg_type = args[1]
             if len(self.watching_messages) == 0:
-                wp.register_message_callback(self._watched_message_received)
+                wp_instance.register_message_callback(self._watched_message_received)
             if msg_type not in self.watching_messages:
                 self.watching_messages.append(msg_type)
-        elif args[0] == "property" and args[1] not in wp.allProps:
+        elif args[0] == "property" and args[1] not in wp_instance.allProps:
             print(f"ERROR: Unknown property: {args[1]}")
         elif args[0] == "property":
             prop_name = args[1]
             if len(self.watching_properties) == 0:
-                wp.register_property_callback(self._watched_property_changed)
+                wp_instance.register_property_callback(self._watched_property_changed)
             if prop_name not in self.watching_properties:
                 self.watching_properties.append(prop_name)
         else:
@@ -711,6 +728,10 @@ class WattpilotShell(cmd.Cmd):
 
     def _print_prop_info(self, pd, value):
         global wp
+        if wp is None:
+            _LOGGER.error("_print_prop_info: Wattpilot not initialized")
+            return
+        wp_instance = cast(wattpilot.Wattpilot, wp)
         _LOGGER.debug(f"Property definition: {pd}")
         title = ""
         desc = ""
@@ -727,7 +748,7 @@ class WattpilotShell(cmd.Cmd):
         print(f"- {pd['key']} ({pd['jsonType']}{alias}{rw}): {title}")
         if desc:
             print(f"  Description: {desc}")
-        if pd["key"] in wp.allProps.keys():
+        if pd["key"] in wp_instance.allProps.keys():
             print(
                 f"  Value: {mqtt_get_encoded_property(pd, value)}{' (raw:' + utils_value2json(value) + ')' if 'valueMap' in pd else ''}"
             )
@@ -978,7 +999,12 @@ def mqtt_stop(mqtt_client):
 
 
 def mqtt_set_value(client, userdata, message):
+    global wp
     global wpdef
+    if wp is None:
+        _LOGGER.error("mqtt_set_value: Wattpilot not initialized")
+        return
+    wp_instance = cast(wattpilot.Wattpilot, wp)
     topic_regex = mqtt_subst_topic(MQTT_TOPIC_PROPERTY_SET, {"propName": "([^/]+)"})
     name = re.sub(topic_regex, r"\1", message.topic)
     if not name or name == "" or not wpdef["properties"][name]:
@@ -990,7 +1016,7 @@ def mqtt_set_value(client, userdata, message):
     _LOGGER.info(
         f"MQTT Message received: topic={message.topic}, name={name}, value={value}"
     )
-    wp.send_update(name, value)
+    wp_instance.send_update(name, value)
 
 
 def mqtt_get_watched_properties(wp):

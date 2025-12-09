@@ -10,9 +10,11 @@ from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
     STATE_UNKNOWN,
+    EntityCategory,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo, Entity, EntityCategory
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
 from packaging.version import Version
 
 from .const import (
@@ -226,20 +228,11 @@ class ChargerPlatformEntity(Entity):
         c_tst = self._entity_cfg.get("connection", None)
         if c_tst is None:
             return True
-        # Use runtime_data if available, fallback to hass.data for compatibility
-        if (
-            hasattr(self._entry, "runtime_data")
-            and self._entry.runtime_data is not None
-        ):
-            connection = STATE_UNKNOWN
-        else:
-            entry_data = self.hass.data.get(DOMAIN, {}).get(self._entry.entry_id, None)
-            if entry_data is None:
-                return True
-            config_params = entry_data.get("params", None)
-            if config_params is None:
-                return True
-            connection = config_params.get(CONF_CONNECTION, STATE_UNKNOWN)
+        runtime_data = getattr(self._entry, "runtime_data", None)
+        if runtime_data is None:
+            return True
+        config_params = runtime_data.params or {}
+        connection = config_params.get(CONF_CONNECTION, STATE_UNKNOWN)
         v = str(connection).upper() == str(c_tst).upper()
         _LOGGER.debug(
             "%s - %s: _check_connection_supported complete (%s=%s -> %s)",
@@ -254,7 +247,7 @@ class ChargerPlatformEntity(Entity):
     @property
     def description(self) -> str | None:
         """Return the description of the entity."""
-        return self._description
+        return self._attributes.get("description", None)
 
     @property
     def entity_category(self) -> EntityCategory | None:
@@ -354,20 +347,16 @@ class ChargerPlatformEntity(Entity):
             return True
         if self._source == "namespacelist":
             return True
-        if getattr(self, self._state_attr, STATE_UNKNOWN) == self._entity_cfg.get(
+        return getattr(self, self._state_attr, STATE_UNKNOWN) == self._entity_cfg.get(
             "default_state", STATE_UNKNOWN
-        ):
-            return True
-        return False
+        )
 
     @property
     def entity_registry_enabled_default(self) -> bool:
         """Return False if the entity should be disable by default."""
         try:
             enabled = self._entity_cfg.get("enabled", True)
-            if enabled is False or str(enabled).lower() == "false":
-                return False
-            return True
+            return enabled is not False and str(enabled).lower() != "false"
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: entity_registry_enabled_default failed - default enable: %s (%s.%s)",
@@ -419,7 +408,7 @@ class ChargerPlatformEntity(Entity):
                     self._charger_id,
                     self._identifier,
                 )
-                await self.hass.async_create_task(self.async_local_poll())
+                await self.async_local_poll()
             else:
                 _LOGGER.debug(
                     "%s - %s: async_update is done via push - do nothing / wait for push event",
@@ -459,7 +448,7 @@ class ChargerPlatformEntity(Entity):
                     self._entity_cfg.get("value_id", STATE_UNKNOWN),
                     STATE_UNKNOWN,
                 )
-                for attr_id in self._entity_cfg.get("attribute_ids", None):
+                for attr_id in self._entity_cfg.get("attribute_ids", []):
                     self._attributes[attr_id] = getattr(
                         namespace, attr_id, STATE_UNKNOWN
                     )
@@ -473,7 +462,7 @@ class ChargerPlatformEntity(Entity):
                         i = i + 1
                 else:
                     state = state_list[int(self._entity_cfg.get("value_id", 0))]
-                    for attr_entry in self._entity_cfg.get("attribute_ids", None):
+                    for attr_entry in self._entity_cfg.get("attribute_ids", []):
                         attr_id = attr_entry.split(":")[0]
                         attr_index = attr_entry.split(":")[1]
                         self._attributes[attr_id] = state_list[int(attr_index)]

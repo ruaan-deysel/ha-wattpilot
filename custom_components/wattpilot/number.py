@@ -9,10 +9,8 @@ from typing import TYPE_CHECKING, Any, Final
 
 import aiofiles
 import yaml
-from homeassistant.components.number import (
-    UNIT_CONVERTERS,
-    NumberEntity,
-)
+from homeassistant.components.number import NumberEntity
+from homeassistant.components.number.const import UNIT_CONVERTERS
 from homeassistant.core import HomeAssistant
 
 from .entities import ChargerPlatformEntity
@@ -150,14 +148,15 @@ class ChargerNumber(ChargerPlatformEntity, NumberEntity):
         self._attr_native_unit_of_measurement = self._entity_cfg.get(
             "unit_of_measurement", None
         )
-        unit_converter = UNIT_CONVERTERS.get(self._attr_device_class)
-        if (
-            unit_converter is not None
-            and self._attr_native_unit_of_measurement in unit_converter.VALID_UNITS
-        ):
-            self._attr_suggested_unit_of_measurement = self._entity_cfg.get(
-                "unit_of_measurement", None
-            )
+        if self._attr_device_class is not None:
+            unit_converter = UNIT_CONVERTERS.get(self._attr_device_class)
+            if (
+                unit_converter is not None
+                and self._attr_native_unit_of_measurement in unit_converter.VALID_UNITS
+            ):
+                self._attr_suggested_unit_of_measurement = self._entity_cfg.get(
+                    "unit_of_measurement", None
+                )
 
         n = self._entity_cfg.get("native_min_value", None)
         if n is not None:
@@ -168,7 +167,9 @@ class ChargerNumber(ChargerPlatformEntity, NumberEntity):
         n = self._entity_cfg.get("native_step", None)
         if n is not None:
             self._attr_native_step = float(n)
-        self._attr_mode = self._entity_cfg.get("mode", None)
+        mode = self._entity_cfg.get("mode", None)
+        if mode is not None:
+            self._attr_mode = mode
 
     def _get_platform_specific_state(self) -> Any:
         """Platform specific init actions."""

@@ -414,7 +414,7 @@ class Wattpilot:
         if name == "version":
             self._version = value
         if name == "ast":
-            self._AllowCharging = self._astValues[value]
+            self._AllowCharging = self.astValues[value]
         if name == "fwv":
             self._firmware = value
         if name == "wss":
@@ -481,7 +481,11 @@ class Wattpilot:
         if self._authhashtype == CONST_HASH_PBKDF2:
             self._hashedpassword = base64.b64encode(
                 hashlib.pbkdf2_hmac(
-                    "sha512", password.encode(), self.serial.encode(), 100000, 256
+                    "sha512",
+                    password.encode(),
+                    self.serial.encode() if self.serial else b"",
+                    100000,
+                    256,
                 )
             )[:32]
         elif self._authhashtype == CONST_HASH_BCRYPT:
@@ -691,10 +695,14 @@ class Wattpilot:
         self.password = password
 
         if cloud:
-            self._url = "wss://app.wattpilot.io/app/" + serial + "?version=1.2.9"
+            self._url = (
+                "wss://app.wattpilot.io/app/"
+                + (serial if serial else "")
+                + "?version=1.2.9"
+            )
         else:
             self._url = "ws://" + ip + "/ws"
-        self.serial = None
+        self.serial = serial
         self._connected = False
         self._allProps = {}
         self._allPropsInitialized = False

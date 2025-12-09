@@ -4,27 +4,26 @@
 #   see: https://github.com/goecharger/go-eCharger-API-v2/blob/main/apikeys-de.md
 
 sensor:
-
-#  - source: <property / attribute / namespacelist>
-#    id: <name of the charger attribute or prop to read>
-#    name: <optional: name of the sensor within HA>
-#    uid: <optional: unique ID postfix - required if multiple entities with same <id> value exist>
-#    description: <optional: key within HA>
-#    icon: <optional: key within HA>
-#    enabled: <optional: if set to False entity is by default disabled>
-#    device_class: <optional: key within HA>
-#    state_class: <optional: key within HA>
-#    unit_of_measurement: <optional: key within HA>
-#    entity_category: <optional: key within HA>
-#    value_id: <required for charger properties of type namespace: define which namespace attribute should be used as state value>
-#    namespace_id: <required for namespacelist source objects: define which item from the list of namespaces should be used>
-#    attribute_ids: <optional for charger properties of type namespace: define which namespace attributes should be included into HA>
-#    enum: <optional dict to map states to enum values>
-#    firmware: <optional string ">=1.1" | "<=1.1" | "==1.1" | "<1.1" | ">1.1" to setup entity only if charger firmware matches>
-#    variant: <optional string "11 / 22" to setup entity only if charger variant matches 11kW version or 22kW version>
-#    connection: <optional string "cloud / local" to setup entity only if charger connection type matches>
-#    default_state: <optional value to use as default state for "None"/"Null" charger properties - the default is STATE_UNKNOWN. Use with caution>
-#    html_unescape: <optional boolean to unescape HTML characters in state value>
+  #  - source: <property / attribute / namespacelist>
+  #    id: <name of the charger attribute or prop to read>
+  #    name: <optional: name of the sensor within HA>
+  #    uid: <optional: unique ID postfix - required if multiple entities with same <id> value exist>
+  #    description: <optional: key within HA>
+  #    icon: <optional: key within HA>
+  #    enabled: <optional: if set to False entity is by default disabled>
+  #    device_class: <optional: key within HA>
+  #    state_class: <optional: key within HA>
+  #    unit_of_measurement: <optional: key within HA>
+  #    entity_category: <optional: key within HA>
+  #    value_id: <required for charger properties of type namespace: define which namespace attribute should be used as state value>
+  #    namespace_id: <required for namespacelist source objects: define which item from the list of namespaces should be used>
+  #    attribute_ids: <optional for charger properties of type namespace: define which namespace attributes should be included into HA>
+  #    enum: <optional dict to map states to enum values>
+  #    firmware: <optional string ">=1.1" | "<=1.1" | "==1.1" | "<1.1" | ">1.1" to setup entity only if charger firmware matches>
+  #    variant: <optional string "11 / 22" to setup entity only if charger variant matches 11kW version or 22kW version>
+  #    connection: <optional string "cloud / local" to setup entity only if charger connection type matches>
+  #    default_state: <optional value to use as default state for "None"/"Null" charger properties - the default is STATE_UNKNOWN. Use with caution>
+  #    html_unescape: <optional boolean to unescape HTML characters in state value>
 
   - source: attribute
     id: AccessState
@@ -33,6 +32,7 @@ sensor:
 
   - source: attribute
     id: carConnected
+    name: "Car Connected"
     description: "State of the car plug - values are: 'no car', 'charging', 'ready','complete'"
     icon: "mdi:ev-plug-type2"
 
@@ -187,12 +187,12 @@ sensor:
       - name
       - cardId
 
-#  - source: attribute
-#    id: errorState
-#    name: ChargingState
-#    description: "Charging state of the car - values are: 'Unknown Error', 'Idle', 'Charging', 'Wait Car', 'Complete', 'Error'"
-#    icon: "mdi:state-machine"
-#    enabled: False
+  #  - source: attribute
+  #    id: errorState
+  #    name: ChargingState
+  #    description: "Charging state of the car - values are: 'Unknown Error', 'Idle', 'Charging', 'Wait Car', 'Complete', 'Error'"
+  #    icon: "mdi:state-machine"
+  #    enabled: False
 
   - source: property
     id: car
@@ -515,4 +515,3 @@ sensor:
     icon: "mdi:wifi-settings"
     enabled: False
     entity_category: diagnostic
-
