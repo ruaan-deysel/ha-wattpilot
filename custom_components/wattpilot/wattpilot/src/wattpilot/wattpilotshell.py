@@ -26,9 +26,11 @@ wpdef: dict = {}
 
 
 def _env_bool(value: str | None, default: bool = False) -> bool:
-    """Parse truthy/falsey strings into bool with a safe default."""
+    """Parse truthy/falsey strings into bool with a safe default. Handles bool input explicitly."""
     if value is None:
         return default
+    if isinstance(value, bool):
+        return value
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -105,7 +107,17 @@ def wp_read_apidef():
         data = pkgutil.get_data(__name__, "resources/wattpilot.yaml")
         if data is None:
             raise FileNotFoundError("Could not load wattpilot.yaml")
-        api_definition = data.decode("utf-8")
+        try:
+            api_definition = data.decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise UnicodeDecodeError(
+                e.encoding,
+                e.object,
+                e.start,
+                e.end,
+                f"Failed to decode wattpilot.yaml as UTF-8: {e.reason}. "
+                "This usually means the file is corrupted or not valid UTF-8.",
+            ) from e
     wpdef = {
         "config": {},
         "messages": {},
@@ -1418,11 +1430,20 @@ def main():
     main_setup_env()
 
     # Set debug level:
-    level = (
-        WATTPILOT_DEBUG_LEVEL
-        if isinstance(WATTPILOT_DEBUG_LEVEL, int)
-        else getattr(logging, str(WATTPILOT_DEBUG_LEVEL).upper(), logging.INFO)
-    )
+    if isinstance(WATTPILOT_DEBUG_LEVEL, int):
+        level = WATTPILOT_DEBUG_LEVEL
+    else:
+        level_name = str(WATTPILOT_DEBUG_LEVEL).upper()
+        if hasattr(logging, level_name) and isinstance(
+            getattr(logging, level_name), int
+        ):
+            level = getattr(logging, level_name)
+        else:
+            _LOGGER.warning(
+                "Invalid log level '%s' for WATTPILOT_DEBUG_LEVEL; using INFO instead.",
+                WATTPILOT_DEBUG_LEVEL,
+            )
+            level = logging.INFO
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
     # Only add a StreamHandler if one does not already exist (prevent duplicates when imported as module)
