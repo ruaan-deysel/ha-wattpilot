@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Final
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
+    CONF_PARAMS,
     CONF_PASSWORD,
     CONF_TIMEOUT,
 )
@@ -25,7 +26,6 @@ from .const import (
     CONF_CONNECTION,
     CONF_DBG_PROPS,
     CONF_LOCAL,
-    CONF_PARAMS,
     CONF_PUSH_ENTITIES,
     CONF_SERIAL,
     DEFAULT_NAME,
