@@ -26,7 +26,7 @@ wpdef: dict = {}
 
 
 def _env_bool(value: str | None, default: bool = False) -> bool:
-    """Parse truthy/falsey strings into bool with a safe default. Handles bool input explicitly."""
+    """Parse truthy/falsy strings into bool with a safe default. Handles bool input explicitly."""
     if value is None:
         return default
     if isinstance(value, bool):
@@ -110,13 +110,9 @@ def wp_read_apidef():
         try:
             api_definition = data.decode("utf-8")
         except UnicodeDecodeError as e:
-            raise UnicodeDecodeError(
-                e.encoding,
-                e.object,
-                e.start,
-                e.end,
+            raise ValueError(
                 f"Failed to decode wattpilot.yaml as UTF-8: {e.reason}. "
-                "This usually means the file is corrupted or not valid UTF-8.",
+                "This usually means the file is corrupted or not valid UTF-8."
             ) from e
     wpdef = {
         "config": {},
@@ -1090,7 +1086,7 @@ def mqtt_set_value(client, userdata, message):
         return
     pd = wpdef["properties"].get(name)
     if pd is None:
-        _LOGGER.warning(f"Unknown property {name}")
+        _LOGGER.warning(f"Unknown property '{name}'")
         return
     if pd.get("rw") == "R":
         _LOGGER.warning(f"Property {name} is not writable")
