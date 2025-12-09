@@ -49,7 +49,7 @@ def _validate_apidef(config: Any) -> dict:
         if not isinstance(prop, dict) or "key" not in prop:
             raise ValueError("Each property entry must be a mapping with a 'key'")
         child_props = prop.get("childProps", [])
-        if child_props is not None and not isinstance(child_props, list):
+        if not isinstance(child_props, list):
             raise ValueError("'childProps' must be a list when present")
     return config
 
@@ -102,7 +102,8 @@ def wp_read_apidef():
         )
     except FileNotFoundError:
         # Fallback for older packaging setups
-        api_definition = pkgutil.get_data(__name__, "resources/wattpilot.yaml")
+        data = pkgutil.get_data(__name__, "resources/wattpilot.yaml")
+        api_definition = data.decode("utf-8") if data else None
     wpdef = {
         "config": {},
         "messages": {},
@@ -1009,9 +1010,13 @@ def mqtt_setup_client(host, port, client_id, available_topic, command_topic):
                 client.reconnect()
                 _LOGGER.info("MQTT client reconnected on attempt %s", attempt)
                 return
-            except Exception:  # noqa: BLE001
-                _LOGGER.exception("MQTT reconnect attempt %s failed", attempt)
+            except (OSError, ConnectionError) as e:
+                # Log connection-related errors and retry with backoff
+                _LOGGER.warning(
+                    "MQTT reconnect attempt %s failed: %s; will retry", attempt, e
+                )
                 sleep(2 * attempt)
+        # Exhausted all reconnection attempts
         _LOGGER.error("MQTT client could not reconnect after 3 attempts")
 
     mqtt_client.on_disconnect = _on_disconnect
@@ -1071,10 +1076,10 @@ def mqtt_set_value(client, userdata, message):
         return
     pd = wpdef["properties"].get(name)
     if pd is None:
-        _LOGGER.warning(f"Unknown property '{name}'!")
+        _LOGGER.warning(f"Unknown property '{name}'")
         return
     if pd.get("rw") == "R":
-        _LOGGER.warning(f"Property '{name}' is not writable!")
+        _LOGGER.warning(f"Property {name} is not writable")
         return
     value = mqtt_get_decoded_property(pd, str(message.payload.decode("utf-8")))
     _LOGGER.info(
@@ -1414,7 +1419,8 @@ def main():
     level = getattr(logging, str(WATTPILOT_DEBUG_LEVEL).upper(), logging.INFO)
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
-    if not root_logger.handlers:
+    # Only add a StreamHandler if one does not already exist (prevent duplicates when imported as module)
+    if not any(isinstance(h, logging.StreamHandler) for h in root_logger.handlers):
         handler = logging.StreamHandler()
         handler.setLevel(level)
         formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
