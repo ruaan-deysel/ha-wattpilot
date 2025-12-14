@@ -2,7 +2,7 @@ Fronius Wattpilot Integration for Home Assistant
 Copyright 2023 @mk-maddin
 Copyright 2024-2025 @ruaan-deysel
 
-This product includes software developed by Martin Dagarin (mk-maddin)
+This product includes software developed by @mk-maddin
 as the original author of the Home Assistant Wattpilot integration.
 
 This project incorporates the wattpilot Python module:
