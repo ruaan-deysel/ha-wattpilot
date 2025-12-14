@@ -169,4 +169,9 @@ This integration is not officially associated with or endorsed by Fronius. Froni
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2023 Martin Dagarin (@mk-maddin) - Original Author  
+Copyright (c) 2024-2025 Ruaan Deysel (@ruaan-deysel) - Current Maintainer
+
+See [NOTICE](NOTICE) file for additional attribution information.
