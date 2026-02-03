@@ -37,7 +37,7 @@ number:
     unit_of_measurement: "A"
     variant: 11
 
-  - id: amp
+  - id: amp_22kw
     set_type: int
     name: "Max Charging Current"
     description: "Maximum charging current allowed per phase"

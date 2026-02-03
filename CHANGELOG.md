@@ -37,8 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Availability Handling**: Entities now properly check coordinator availability before reporting their own status
 - **Error Logging**: Improved logging when charger becomes unavailable with translation support
 
-## [0.4.0] - 2025-12-08
-
 ## [0.4.2] - 2025-12-09
 
 ### Added

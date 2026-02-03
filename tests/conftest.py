@@ -80,8 +80,27 @@ def mock_hass() -> MagicMock:
     hass = MagicMock()
     hass.loop = MagicMock()
     hass.data = {}
-    hass.async_create_task = MagicMock()
-    hass.bus = MagicMock()
+    hass.async_create_task = MagicMock(return_value=None)
+
+    # Create a proper event bus mock
+    bus = MagicMock()
+    bus.async_fire = AsyncMock()
+    bus.fire = MagicMock()
+    hass.bus = bus
+
+    # Add config_entries mock
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.config_entries.async_reload = AsyncMock()
+    hass.config_entries.async_get_entry = MagicMock(return_value=None)
+
+    # Add services mock
+    hass.services = MagicMock()
+    hass.services.async_register = AsyncMock()
+    hass.services.has_service = MagicMock(return_value=False)
+
     return hass
 
 
@@ -253,3 +272,22 @@ def mock_disconnect_charger() -> Generator[AsyncMock]:
         return_value=None,
     ) as mock_disconnect:
         yield mock_disconnect
+
+
+@pytest.fixture
+def mock_config_entry(mock_config_entry_data: dict) -> Any:
+    """Create a mock config entry."""
+    from homeassistant.config_entries import ConfigEntry
+
+    return ConfigEntry(
+        version=1,
+        minor_version=0,
+        domain=DOMAIN,
+        title="Test Wattpilot",
+        data=mock_config_entry_data,
+        source="user",
+        unique_id="12345678",
+        discovery_keys={},
+        options={},
+        subentries_data={},
+    )

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 import yaml
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 
 
 class TestIntegrationSetup:
@@ -167,3 +170,284 @@ class TestYamlConfigurations:
             assert isinstance(config[platform], list), (
                 f"Platform config should be a list in {platform}.yaml"
             )
+
+
+class TestAsyncSetup:
+    """Test async_setup function."""
+
+    async def test_async_setup_registers_services(self, hass: HomeAssistant) -> None:
+        """Test that async_setup registers services."""
+        from custom_components.wattpilot import async_setup
+
+        with patch(
+            "custom_components.wattpilot._ensure_services_registered"
+        ) as mock_register:
+            result = await async_setup(hass, {})
+            assert result is True
+            mock_register.assert_called_once_with(hass)
+
+
+class TestAsyncSetupEntry:
+    """Test async_setup_entry function."""
+
+    async def test_setup_entry_success(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+        mock_connect_charger: AsyncMock,
+    ) -> None:
+        """Test successful config entry setup."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_setup_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        with (
+            patch("custom_components.wattpilot.async_get_integration"),
+            patch(
+                "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "custom_components.wattpilot.hass.config_entries.async_forward_entry_setups",
+                new_callable=AsyncMock,
+            ),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+        ):
+            result = await async_setup_entry(hass, entry)
+            assert result is True
+            mock_connect_charger.assert_called_once()
+
+    async def test_setup_entry_connection_fails(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test config entry setup when connection fails."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_setup_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        with (
+            patch(
+                "custom_components.wattpilot.utils.async_ConnectCharger",
+                return_value=None,
+            ),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+            pytest.raises(ConfigEntryNotReady),
+        ):
+            await async_setup_entry(hass, entry)
+
+    async def test_setup_entry_coordinator_fails(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,  # noqa: ARG002
+        mock_config_entry_data: dict,
+        mock_connect_charger: AsyncMock,  # noqa: ARG002
+        mock_disconnect_charger: AsyncMock,
+    ) -> None:
+        """Test config entry setup when coordinator fails."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_setup_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        with (  # noqa: PT012
+            patch("custom_components.wattpilot.async_get_integration"),
+            patch(
+                "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
+                side_effect=Exception("Coordinator failed"),
+            ),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+            pytest.raises(ConfigEntryNotReady),
+        ):
+            await async_setup_entry(hass, entry)
+            mock_disconnect_charger.assert_called_once()
+
+
+class TestAsyncUnloadEntry:
+    """Test async_unload_entry function."""
+
+    async def test_unload_entry_success(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test successful config entry unload."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_unload_entry
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        # Set up runtime data
+        coordinator = MagicMock()
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+            options_update_listener=MagicMock(),
+        )
+        entry.runtime_data = runtime_data
+
+        with (
+            patch(
+                "custom_components.wattpilot.hass.config_entries.async_unload_platforms",
+                return_value=True,
+            ),
+            patch(
+                "custom_components.wattpilot.utils.async_DisconnectCharger"
+            ) as mock_disconnect,
+        ):
+            result = await async_unload_entry(hass, entry)
+            assert result is True
+            mock_disconnect.assert_called_once()
+
+    async def test_unload_entry_platform_fails(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test config entry unload when platform unload fails."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_unload_entry
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        coordinator = MagicMock()
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+        )
+        entry.runtime_data = runtime_data
+
+        with patch(
+            "custom_components.wattpilot.hass.config_entries.async_unload_platforms",
+            return_value=False,
+        ):
+            result = await async_unload_entry(hass, entry)
+            assert result is False
+
+
+class TestOptionsUpdateListener:
+    """Test options update listener."""
+
+    async def test_options_update_listener_success(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test options update listener updates config."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import options_update_listener
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={"new_option": "value"},
+            subentries_data={},
+        )
+
+        coordinator = MagicMock()
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+        )
+        entry.runtime_data = runtime_data
+
+        with (
+            patch.object(
+                hass.config_entries, "async_update_entry"
+            ) as mock_update_entry,
+            patch.object(hass.config_entries, "async_reload") as mock_reload,
+        ):
+            await options_update_listener(hass, entry)
+            mock_update_entry.assert_called_once()
+            mock_reload.assert_called_once_with(entry.entry_id)

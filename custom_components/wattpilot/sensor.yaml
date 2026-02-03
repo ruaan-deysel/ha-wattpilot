@@ -27,6 +27,7 @@ sensor:
 
   - source: attribute
     id: AccessState
+    name: "Access State"
     description: "State of access for the charger - values are: 'open', 'locked', 'auto'"
     icon: "mdi:lock-question"
 

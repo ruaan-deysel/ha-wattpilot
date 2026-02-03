@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ha-wattpilot"
-version = "0.4.2"
+version = "0.5.0"
 description = "Home Assistant integration for Fronius Wattpilot EV chargers"
 readme = "README.md"
 license = {text = "MIT"}
@@ -83,4 +83,4 @@ exclude_lines = [
     "if __name__ == .__main__.:",
 ]
 show_missing = true
-fail_under = 9
+fail_under = 90

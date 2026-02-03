@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import yaml
+from homeassistant.core import HomeAssistant
 
 # Path to the sensor.yaml configuration
 SENSOR_YAML_PATH = (
@@ -237,3 +238,272 @@ class TestEnergyDashboardCompatibility:
         assert "energy dashboard" in nrg_desc, (
             "nrg sensor description should mention Energy Dashboard"
         )
+
+
+class TestSensorPlatformSetup:
+    """Test sensor platform setup."""
+
+    async def test_async_setup_entry_success(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test successful sensor platform setup."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.sensor import async_setup_entry
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=mock_coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+        )
+        entry.runtime_data = runtime_data
+
+        async_add_entities = AsyncMock()
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp",
+            return_value=100.0,
+        ):
+            await async_setup_entry(hass, entry, async_add_entities)
+            assert async_add_entities.called
+
+
+class TestChargerSensor:
+    """Test ChargerSensor entity class."""
+
+    def test_sensor_device_class_conversion(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test sensor device_class string is converted to enum."""
+        from homeassistant.components.sensor import SensorDeviceClass
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.sensor import ChargerSensor
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=mock_coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+        )
+        entry.runtime_data = runtime_data
+
+        entity_cfg = {
+            "id": "test_power_sensor_id",
+            "name": "Test Power Sensor",
+            "source": "property",
+            "namespace_id": 0,
+            "default_state": 0,
+            "device_class": "power",
+            "unit_of_measurement": "W",
+            "state_class": "measurement",
+        }
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp",
+            return_value=1000.0,
+        ):
+            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
+            assert sensor._attr_device_class == SensorDeviceClass.POWER
+
+    async def test_sensor_state_validation_with_enum(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test sensor state validation with enum mapping."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.sensor import ChargerSensor
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=mock_coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+        )
+        entry.runtime_data = runtime_data
+
+        entity_cfg = {
+            "id": "test_enum_sensor_id",
+            "name": "Test Enum Sensor",
+            "source": "property",
+            "namespace_id": 0,
+            "default_state": "idle",
+            "enum": {0: "idle", 1: "charging", 2: "complete"},
+        }
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp",
+            return_value=1,
+        ):
+            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
+            validated_state = await sensor._async_update_validate_platform_state(1)
+            assert validated_state == "charging"
+
+    async def test_sensor_state_validation_html_unescape(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test sensor state validation with HTML unescaping."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.sensor import ChargerSensor
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=mock_coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+        )
+        entry.runtime_data = runtime_data
+
+        entity_cfg = {
+            "id": "test_html_sensor_id",
+            "name": "Test HTML Sensor",
+            "source": "property",
+            "namespace_id": 0,
+            "default_state": "",
+            "html_unescape": True,
+        }
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp",
+            return_value="&lt;test&gt;",
+        ):
+            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
+            validated_state = await sensor._async_update_validate_platform_state(
+                "&lt;test&gt;"
+            )
+            assert validated_state == "<test>"
+
+    async def test_sensor_state_validation_none_returns_unknown(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test sensor state validation returns UNKNOWN for None."""
+        from homeassistant.config_entries import ConfigEntry
+        from homeassistant.const import STATE_UNKNOWN
+
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.sensor import ChargerSensor
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=mock_coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            debug_properties=False,
+        )
+        entry.runtime_data = runtime_data
+
+        entity_cfg = {
+            "id": "test_sensor_id",
+            "name": "Test Sensor",
+            "source": "property",
+            "namespace_id": 0,
+            "default_state": None,
+        }
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp",
+            return_value=None,
+        ):
+            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
+            validated_state = await sensor._async_update_validate_platform_state(None)
+            assert validated_state == STATE_UNKNOWN
