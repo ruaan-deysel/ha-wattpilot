@@ -505,5 +505,7 @@ class TestChargerSensor:
             return_value=None,
         ):
             sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
+            # Set the required attribute to avoid AttributeError
+            sensor._attr_native_unit_of_measurement = None
             validated_state = await sensor._async_update_validate_platform_state(None)
             assert validated_state == STATE_UNKNOWN
