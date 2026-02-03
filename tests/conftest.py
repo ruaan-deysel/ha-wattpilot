@@ -105,6 +105,12 @@ def mock_hass() -> MagicMock:
 
 
 @pytest.fixture
+def hass(mock_hass: MagicMock) -> MagicMock:
+    """Alias for mock_hass for compatibility."""
+    return mock_hass
+
+
+@pytest.fixture
 def mock_coordinator(mock_hass: MagicMock, mock_charger: MagicMock) -> MagicMock:
     """Create a mock coordinator instance."""
     coordinator = MagicMock()
