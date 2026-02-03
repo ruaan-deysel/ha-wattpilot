@@ -1,7 +1,8 @@
-"""Tests for the config flow."""
+"""Tests for the Wattpilot config flow."""
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,24 +18,25 @@ CONF_SERIAL = "serial"
 DOMAIN = "wattpilot"
 
 
-class TestConfigFlow:
-    """Test the config flow."""
+@pytest.fixture
+def mock_charger() -> MagicMock:
+    """Create a mock charger."""
+    charger = MagicMock()
+    charger.serial = "12345678"
+    charger.name = "Test Wattpilot"
+    charger.firmware = "40.7"
+    charger.connected = True
+    charger.allPropsInitialized = True
+    charger.allProps = {"onv": "40.7"}
+    return charger
 
-    @pytest.fixture
-    def mock_charger(self) -> MagicMock:
-        """Create a mock charger for connection tests."""
-        charger = MagicMock()
-        charger.serial = "12345678"
-        charger.name = "Test Wattpilot"
-        charger.firmware = "40.7"
-        charger.connected = True
-        charger.allPropsInitialized = True
-        charger.allProps = {"onv": "40.7"}
-        return charger
+
+class TestConfigFlowDataValidation:
+    """Test config flow data validation."""
 
     def test_config_data_structure(self) -> None:
         """Test config entry data structure."""
-        config_data = {
+        config_data: dict[str, Any] = {
             CONF_FRIENDLY_NAME: "My Wattpilot",
             CONF_IP_ADDRESS: "192.168.1.100",
             CONF_PASSWORD: "test_pass",
@@ -49,7 +51,7 @@ class TestConfigFlow:
 
     def test_cloud_config_data_structure(self) -> None:
         """Test cloud config entry data structure."""
-        config_data = {
+        config_data: dict[str, Any] = {
             CONF_FRIENDLY_NAME: "My Cloud Wattpilot",
             CONF_SERIAL: "12345678",
             CONF_PASSWORD: "test_pass",
@@ -59,14 +61,10 @@ class TestConfigFlow:
         assert CONF_SERIAL in config_data
         assert config_data[CONF_CONNECTION] == CONF_CLOUD
 
-
-class TestConfigFlowValidation:
-    """Test config flow validation."""
-
     def test_local_connection_requires_ip(self) -> None:
         """Test that local connection requires IP address."""
         # Valid local config
-        valid_config = {
+        valid_config: dict[str, Any] = {
             CONF_FRIENDLY_NAME: "Test",
             CONF_IP_ADDRESS: "192.168.1.100",
             CONF_PASSWORD: "pass",
@@ -75,7 +73,7 @@ class TestConfigFlowValidation:
         assert CONF_IP_ADDRESS in valid_config
 
         # Invalid config without IP
-        invalid_config = {
+        invalid_config: dict[str, Any] = {
             CONF_FRIENDLY_NAME: "Test",
             CONF_PASSWORD: "pass",
             CONF_CONNECTION: CONF_LOCAL,
@@ -85,7 +83,7 @@ class TestConfigFlowValidation:
     def test_cloud_connection_requires_serial(self) -> None:
         """Test that cloud connection requires serial number."""
         # Valid cloud config
-        valid_config = {
+        valid_config: dict[str, Any] = {
             CONF_FRIENDLY_NAME: "Test",
             CONF_SERIAL: "12345678",
             CONF_PASSWORD: "pass",
@@ -94,7 +92,7 @@ class TestConfigFlowValidation:
         assert CONF_SERIAL in valid_config
 
     def test_ip_address_format_validation(self) -> None:
-        """Test IP address format validation patterns."""
+        """Test IP address format validation."""
         import re
 
         ip_pattern = re.compile(
@@ -111,19 +109,10 @@ class TestConfigFlowValidation:
         for ip in invalid_ips:
             assert not ip_pattern.match(ip), f"Invalid IP {ip} should not match"
 
+    def test_config_constants(self) -> None:
+        """Test configuration constants."""
+        from custom_components.wattpilot.const import CONF_CLOUD, CONF_LOCAL, DOMAIN
 
-class TestConfigFlowIntegration:
-    """Test config flow integration with Home Assistant."""
-
-    def test_domain_constant(self) -> None:
-        """Test domain constant is correctly set."""
-        from custom_components.wattpilot.const import DOMAIN as ACTUAL_DOMAIN
-
-        assert ACTUAL_DOMAIN == "wattpilot"
-
-    def test_connection_options(self) -> None:
-        """Test connection options are available."""
-        from custom_components.wattpilot.const import CONF_CLOUD, CONF_LOCAL
-
+        assert DOMAIN == "wattpilot"
         assert CONF_LOCAL == "local"
         assert CONF_CLOUD == "cloud"
