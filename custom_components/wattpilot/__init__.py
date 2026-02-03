@@ -13,6 +13,7 @@ from .const import (
     DOMAIN,
     SUPPORTED_PLATFORMS,
 )
+from .coordinator import WattpilotCoordinator
 from .services import (
     async_registerService,
     async_service_DisconnectCharger,
@@ -92,11 +93,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
     # Set up runtime data using the modern pattern
     try:
         _LOGGER.debug(
+            "%s - async_setup_entry: Creating coordinator",
+            entry.entry_id,
+        )
+        coordinator = WattpilotCoordinator(hass, charger, entry)
+        await coordinator.async_config_entry_first_refresh()
+
+        _LOGGER.debug(
             "%s - async_setup_entry: Creating runtime data",
             entry.entry_id,
         )
         entry.runtime_data = WattpilotRuntimeData(
             charger=charger,
+            coordinator=coordinator,
             push_entities={},
             params=dict(entry.data),
             debug_properties=False,

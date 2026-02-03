@@ -284,14 +284,13 @@ sensor:
 
   - source: property
     id: eto
-    name: "Totally Charged"
-    description: "Totally charged power"
+    name: "Total Energy"
+    description: "Total energy charged (lifetime). Use this sensor for Home Assistant Energy Dashboard device consumption tracking."
     icon: "mdi:meter-electric"
     device_class: energy
-    state_class: total
+    state_class: total_increasing
     unit_of_measurement: "Wh"
-    default_state: -1
-    #entity_category: diagnostic
+    default_state: 0
 
   - source: property
     id: ffb
@@ -376,11 +375,12 @@ sensor:
   - source: property
     id: nrg
     name: "Charging Power"
-    description: "Charging power used for current car charging process"
+    description: "Current charging power. Use this sensor for Home Assistant Energy Dashboard device power tracking."
     icon: "mdi:lightning-bolt-circle"
     device_class: power
+    state_class: measurement
     unit_of_measurement: W
-    default_state: -1
+    default_state: 0
     value_id: 11
     attribute_ids:
       - L1_Voltage:0
@@ -489,11 +489,11 @@ sensor:
 
   - source: property
     id: wh
-    name: "Connection Charged"
-    description: "Energy in Wh since car connected"
+    name: "Session Energy"
+    description: "Energy charged since car connected (resets when car disconnects)"
     icon: "mdi:ev-station"
     device_class: energy
-    state_class: total
+    state_class: total_increasing
     unit_of_measurement: "Wh"
     default_state: 0
 

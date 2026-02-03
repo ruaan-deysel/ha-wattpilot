@@ -1,5 +1,6 @@
-tier: bronze
+tier: silver
 rules:
+  # Bronze tier rules (all met)
   - runtime-data
   - has-entity-name
   - entity-unique-id
@@ -8,6 +9,35 @@ rules:
   - test-before-setup
   - entity-event-setup
   - action-setup
+
+  # Silver tier rules (all met)
+  - config-flow-test-coverage
+  - docs-actions
+  - reauthentication-flow
+  - diagnostics
+  - log-when-unavailable
+  - coordinator
+  - test-coverage
+  - exception-translations
+
+  # Gold tier rules (partial)
+  - devices
+  - entity-category
+  - entity-translations
+  - icons
+  - discovery
+  - reconfiguration-flow
+
+  # Platinum tier rules (remaining work)
+  # - async-dependency
+  # - inject-websession
+  # - strict-typing
+  # - has-stale-devices
 notes:
+  - Data updates are push-based (iot_class: local_push) wrapped in DataUpdateCoordinator.
+  - Coordinator handles availability, error counting, and coordinated updates.
   - Services are registered once at integration setup.
-  - Data updates are push-based (iot_class: local_push); runtime_data holds charger/push_entities/params.
+  - Test coverage includes coordinator, diagnostics, config flow, and sensor tests.
+  - Exception translations added for charger unavailable, not found, connection failed.
+  - Icons.json added for service icons.
+  - Entities inherit from CoordinatorEntity for proper availability handling.

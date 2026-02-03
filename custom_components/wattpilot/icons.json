@@ -1,0 +1,19 @@
+{
+  "services": {
+    "set_next_trip": {
+      "service": "mdi:calendar-clock"
+    },
+    "set_goe_cloud": {
+      "service": "mdi:cloud-sync"
+    },
+    "set_debug_properties": {
+      "service": "mdi:bug"
+    },
+    "disconnect_charger": {
+      "service": "mdi:power-plug-off"
+    },
+    "reconnect_charger": {
+      "service": "mdi:power-plug"
+    }
+  }
+}

@@ -1,0 +1,97 @@
+# Pre-commit configuration for Fronius Wattpilot integration
+# Based on Home Assistant core pre-commit configuration
+# See: https://github.com/home-assistant/core/blob/dev/.pre-commit-config.yaml
+
+repos:
+  # Ruff - fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.4
+    hooks:
+      - id: ruff-check
+        args:
+          - --fix
+      - id: ruff-format
+        files: ^(custom_components|tests)/.+\.py$
+
+  # Codespell - spell checker
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        args:
+          - --ignore-words-list=hass,HA,eto,fot,reverese,prerequsites,wihtin,objec,asnyc,enitity,unitl,mutliple,wiht,directy,greate,timesamp,ressources
+          - --skip="./.*,*.json,*.yaml"
+          - --quiet-level=2
+        exclude_types: [json]
+        exclude: ^custom_components/wattpilot/wattpilot/
+
+  # Pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-executables-have-shebangs
+        stages: [manual]
+      - id: check-json
+        exclude: (.vscode|.devcontainer)
+      - id: end-of-file-fixer
+        exclude: ^custom_components/wattpilot/wattpilot/
+      - id: trailing-whitespace
+        exclude: ^custom_components/wattpilot/wattpilot/
+      - id: check-yaml
+        args:
+          - --unsafe
+        exclude: ^custom_components/wattpilot/wattpilot/
+      - id: check-added-large-files
+        args:
+          - --maxkb=1000
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.37.0
+    hooks:
+      - id: yamllint
+        args:
+          - -c
+          - .yamllint.yaml
+        exclude: (^custom_components/wattpilot/wattpilot/|^\.github/)
+
+  # Prettier - code formatter for JSON, YAML, Markdown
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.5.3
+    hooks:
+      - id: prettier
+        types_or: [json, markdown]
+        exclude: ^custom_components/wattpilot/wattpilot/
+        additional_dependencies:
+          - prettier@3.5.3
+
+  # Check Python AST
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-ast
+
+  # Local hooks
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: python -m pytest tests/ -v --tb=short
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [pytest-check]
+  submodules: false

@@ -173,5 +173,19 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "charger_unavailable": {
+      "message": "Charger {name} ({serial}) is unavailable. Check connection and power."
+    },
+    "charger_not_found": {
+      "message": "Charger with device ID {device_id} was not found."
+    },
+    "connection_failed": {
+      "message": "Failed to connect to charger {name}. Check network settings."
+    },
+    "invalid_property": {
+      "message": "Property {property} is not valid for charger {name}."
+    }
   }
 }

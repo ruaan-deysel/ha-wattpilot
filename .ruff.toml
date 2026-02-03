@@ -49,6 +49,14 @@ ignore = [
 [lint.flake8-pytest-style]
 fixture-parentheses = false
 
+[lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",   # Use of assert detected (expected in tests)
+    "PLR2004", # Magic value comparison (common in tests)
+    "E402",   # Module level import not at top of file (test fixtures)
+    "PLC0415", # Import outside top-level (test fixtures)
+]
+
 [lint.pyupgrade]
 keep-runtime-typing = true
 

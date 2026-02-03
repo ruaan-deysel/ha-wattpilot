@@ -15,6 +15,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from packaging.version import Version
 
 from .const import (
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 _LOGGER: Final = logging.getLogger(__name__)
 
 
-class ChargerPlatformEntity(Entity):
+class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"], Entity):
     """Base class for Fronius Wattpilot integration."""
 
     _attr_has_entity_name = True
@@ -47,6 +48,10 @@ class ChargerPlatformEntity(Entity):
         charger: Any,
     ) -> None:
         """Initialize the object."""
+        # Initialize coordinator first
+        coordinator = entry.runtime_data.coordinator
+        super().__init__(coordinator)
+
         try:
             self._charger_id = str(
                 entry.data.get(
@@ -264,6 +269,14 @@ class ChargerPlatformEntity(Entity):
     @property
     def available(self) -> bool:
         """Return if device is available."""
+        # Check coordinator availability first
+        if not super().available:
+            _LOGGER.debug(
+                "%s - %s: available: false because coordinator unavailable",
+                self._charger_id,
+                self._identifier,
+            )
+            return False
         if self._init_failed:
             _LOGGER.debug(
                 "%s - %s: available: false because entity init not complete",

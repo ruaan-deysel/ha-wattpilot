@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING, Any, Final
 
 import aiofiles
 import yaml
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.components.sensor.const import UNIT_CONVERTERS
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
@@ -145,6 +149,19 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
+        # Convert device_class string to SensorDeviceClass enum for Energy Dashboard compatibility
+        if self._attr_device_class is not None:
+            try:
+                self._attr_device_class = SensorDeviceClass(
+                    self._attr_device_class.lower()
+                )
+            except ValueError:
+                _LOGGER.warning(
+                    "%s - %s: Unknown device_class: %s",
+                    self._charger_id,
+                    self._identifier,
+                    self._attr_device_class,
+                )
         self._attr_native_unit_of_measurement = self._entity_cfg.get(
             "unit_of_measurement", None
         )

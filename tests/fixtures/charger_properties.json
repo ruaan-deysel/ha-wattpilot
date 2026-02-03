@@ -1,0 +1,225 @@
+{
+  "metadata": {
+    "description": "Mock Wattpilot charger properties for testing",
+    "firmware": "40.7",
+    "serial": "12345678",
+    "variant": "11"
+  },
+  "properties": {
+    "car": {
+      "value": 1,
+      "description": "Car state",
+      "values": {
+        "0": "Unknown",
+        "1": "Idle",
+        "2": "Charging",
+        "3": "WaitCar",
+        "4": "Complete",
+        "5": "Error"
+      }
+    },
+    "amp": {
+      "value": 6,
+      "description": "Requested current (Ampere)",
+      "min": 6,
+      "max": 16
+    },
+    "frc": {
+      "value": 0,
+      "description": "Force state",
+      "values": {
+        "0": "Neutral",
+        "1": "Off",
+        "2": "On"
+      }
+    },
+    "lmo": {
+      "value": 3,
+      "description": "Logic mode",
+      "values": {
+        "3": "Default",
+        "4": "Eco",
+        "5": "NextTrip"
+      }
+    },
+    "eto": {
+      "value": 12345000,
+      "description": "Total energy (Wh)",
+      "unit": "Wh"
+    },
+    "wh": {
+      "value": 1000,
+      "description": "Session energy (Wh)",
+      "unit": "Wh"
+    },
+    "nrg": {
+      "value": [
+        230.0, 231.0, 229.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3450.0,
+        0.0, 0.0, 0.0, 0.0
+      ],
+      "description": "Energy array",
+      "indices": {
+        "0": "U1 (V)",
+        "1": "U2 (V)",
+        "2": "U3 (V)",
+        "3": "UN (V)",
+        "4": "I1 (A)",
+        "5": "I2 (A)",
+        "6": "I3 (A)",
+        "7": "P1 (W)",
+        "8": "P2 (W)",
+        "9": "P3 (W)",
+        "10": "PN (W)",
+        "11": "Total Power (W)",
+        "12": "Power Factor 1",
+        "13": "Power Factor 2",
+        "14": "Power Factor 3",
+        "15": "Power Factor N"
+      }
+    },
+    "rssi": {
+      "value": -65,
+      "description": "WiFi signal strength (dBm)",
+      "unit": "dBm"
+    },
+    "tma": {
+      "value": [25.5, 26.0],
+      "description": "Temperature array",
+      "unit": "°C"
+    },
+    "err": {
+      "value": 0,
+      "description": "Error code",
+      "values": {
+        "0": "None",
+        "1": "FI AC",
+        "2": "FI DC",
+        "3": "Phase",
+        "4": "Overvolt",
+        "5": "Overamp",
+        "6": "Diode",
+        "7": "CP Short",
+        "8": "CP Timeout",
+        "9": "Overtemp"
+      }
+    },
+    "cus": {
+      "value": 1,
+      "description": "Cable unlock state",
+      "values": {
+        "0": "normal",
+        "1": "AutoUnlock",
+        "2": "AlwaysLock"
+      }
+    },
+    "ust": {
+      "value": 0,
+      "description": "Cable lock setting",
+      "values": {
+        "0": "normal",
+        "1": "AutoUnlock",
+        "2": "AlwaysLock"
+      }
+    },
+    "ama": {
+      "value": 16,
+      "description": "Max current limit (Ampere)",
+      "min": 6,
+      "max": 32
+    },
+    "adi": {
+      "value": true,
+      "description": "16A 1-phase adapter attached"
+    },
+    "dwo": {
+      "value": null,
+      "description": "Energy limit (Wh)",
+      "unit": "Wh"
+    },
+    "psm": {
+      "value": 2,
+      "description": "Phase switch mode",
+      "values": {
+        "0": "Auto",
+        "1": "Force 1 Phase",
+        "2": "Force 3 Phase"
+      }
+    },
+    "acu": {
+      "value": 6,
+      "description": "Allowed current (Ampere)",
+      "unit": "A"
+    },
+    "acs": {
+      "value": 0,
+      "description": "Access state",
+      "values": {
+        "0": "open",
+        "1": "wait",
+        "2": "locked"
+      }
+    },
+    "fsp": {
+      "value": false,
+      "description": "Force single phase"
+    },
+    "fna": {
+      "value": "Test Wattpilot",
+      "description": "Friendly name"
+    },
+    "onv": {
+      "value": "40.7",
+      "description": "Firmware version"
+    },
+    "sse": {
+      "value": "12345678",
+      "description": "Serial number"
+    },
+    "typ": {
+      "value": "go-eCharger HOME+ 11kW",
+      "description": "Device type"
+    },
+    "var": {
+      "value": 11,
+      "description": "Variant (11kW or 22kW)",
+      "unit": "kW"
+    },
+    "alw": {
+      "value": true,
+      "description": "Allow charging"
+    },
+    "apo": {
+      "value": false,
+      "description": "Auto phase optimization"
+    },
+    "pom": {
+      "value": 11000,
+      "description": "Power limit (W)",
+      "unit": "W"
+    },
+    "ast": {
+      "value": 0,
+      "description": "Access state",
+      "values": {
+        "0": "open",
+        "1": "locked",
+        "2": "auto"
+      }
+    },
+    "pwm": {
+      "value": 0,
+      "description": "PWM signal",
+      "values": {
+        "0": "ready",
+        "1": "charging",
+        "2": "error",
+        "3": "off"
+      }
+    }
+  },
+  "attributes": {
+    "AccessState": "open",
+    "carConnected": "no car",
+    "hostname": "wattpilot-12345678"
+  }
+}

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Script to run tests for the Fronius Wattpilot integration
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Install test dependencies if needed
+if ! python -c "import pytest" 2>/dev/null; then
+    echo "Installing test dependencies..."
+    pip install -e ".[test]" --quiet
+fi
+
+# Run tests
+echo "Running tests..."
+python -m pytest tests/ "$@"

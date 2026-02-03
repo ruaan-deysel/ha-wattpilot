@@ -173,5 +173,19 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "charger_unavailable": {
+      "message": "Ladestation {name} ({serial}) ist nicht verfügbar. Überprüfen Sie die Verbindung und Stromversorgung."
+    },
+    "charger_not_found": {
+      "message": "Ladestation mit Geräte-ID {device_id} wurde nicht gefunden."
+    },
+    "connection_failed": {
+      "message": "Verbindung zur Ladestation {name} fehlgeschlagen. Überprüfen Sie die Netzwerkeinstellungen."
+    },
+    "invalid_property": {
+      "message": "Eigenschaft {property} ist für Ladestation {name} nicht gültig."
+    }
   }
 }

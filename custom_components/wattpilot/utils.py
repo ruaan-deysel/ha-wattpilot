@@ -188,6 +188,11 @@ async def async_PropertyUpdateHandler(
             )
             return
 
+        # Notify coordinator of property update
+        coordinator = getattr(runtime_data, "coordinator", None)
+        if coordinator is not None:
+            coordinator.async_handle_property_update(identifier, value)
+
         entity = runtime_data.push_entities.get(identifier)
         if entity is not None:
             hass.async_create_task(entity.async_local_push(value))
