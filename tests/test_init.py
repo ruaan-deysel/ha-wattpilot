@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import yaml
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
@@ -135,41 +134,96 @@ class TestManifest:
         # Should be local_push since it uses WebSocket
         assert manifest["iot_class"] == "local_push"
 
-
-class TestYamlConfigurations:
-    """Test YAML configuration files."""
-
-    def test_all_platform_yamls_exist(self) -> None:
-        """Test all platform YAML files exist."""
+    def test_manifest_no_yaml_dependencies(self) -> None:
+        """Test manifest no longer requires pyyaml or aiofiles."""
+        import json
         from pathlib import Path
 
-        from custom_components.wattpilot.const import SUPPORTED_PLATFORMS
+        manifest_path = (
+            Path(__file__).parent.parent / "custom_components/wattpilot/manifest.json"
+        )
+        with manifest_path.open() as f:
+            manifest = json.load(f)
 
-        base_path = Path(__file__).parent.parent / "custom_components/wattpilot"
-
-        for platform in SUPPORTED_PLATFORMS:
-            yaml_path = base_path / f"{platform}.yaml"
-            assert yaml_path.exists(), f"Missing YAML for platform: {platform}"
-
-    def test_all_platform_yamls_valid(self) -> None:
-        """Test all platform YAML files are valid."""
-        from pathlib import Path
-
-        from custom_components.wattpilot.const import SUPPORTED_PLATFORMS
-
-        base_path = Path(__file__).parent.parent / "custom_components/wattpilot"
-
-        for platform in SUPPORTED_PLATFORMS:
-            yaml_path = base_path / f"{platform}.yaml"
-            with yaml_path.open() as f:
-                config = yaml.safe_load(f)
-
-            assert platform in config, (
-                f"Platform '{platform}' not found in {platform}.yaml"
+        requirements = manifest.get("requirements", [])
+        for req in requirements:
+            assert "pyyaml" not in req.lower(), "pyyaml should be removed"
+            assert "aiofiles" not in req.lower(), "aiofiles should be removed"
+            assert "importlib_metadata" not in req.lower(), (
+                "importlib_metadata should be removed"
             )
-            assert isinstance(config[platform], list), (
-                f"Platform config should be a list in {platform}.yaml"
-            )
+
+
+class TestEntityDescriptions:
+    """Test entity descriptions replaced YAML configurations."""
+
+    def test_all_platform_descriptions_exist(self) -> None:
+        """Test all platform description lists exist in descriptions module."""
+        from custom_components.wattpilot.descriptions import (
+            BUTTON_DESCRIPTIONS,
+            NUMBER_DESCRIPTIONS,
+            SELECT_DESCRIPTIONS,
+            SENSOR_DESCRIPTIONS,
+            SWITCH_DESCRIPTIONS,
+            UPDATE_DESCRIPTIONS,
+        )
+
+        assert len(SENSOR_DESCRIPTIONS) > 0
+        assert len(SWITCH_DESCRIPTIONS) > 0
+        assert len(NUMBER_DESCRIPTIONS) > 0
+        assert len(SELECT_DESCRIPTIONS) > 0
+        assert len(BUTTON_DESCRIPTIONS) > 0
+        assert len(UPDATE_DESCRIPTIONS) > 0
+
+    def test_all_descriptions_have_charger_key(self) -> None:
+        """Test all entity descriptions have a charger_key."""
+        from custom_components.wattpilot.descriptions import (
+            BUTTON_DESCRIPTIONS,
+            NUMBER_DESCRIPTIONS,
+            SELECT_DESCRIPTIONS,
+            SENSOR_DESCRIPTIONS,
+            SWITCH_DESCRIPTIONS,
+            UPDATE_DESCRIPTIONS,
+        )
+
+        all_descriptions = [
+            *SENSOR_DESCRIPTIONS,
+            *SWITCH_DESCRIPTIONS,
+            *NUMBER_DESCRIPTIONS,
+            *SELECT_DESCRIPTIONS,
+            *BUTTON_DESCRIPTIONS,
+            *UPDATE_DESCRIPTIONS,
+        ]
+        for desc in all_descriptions:
+            assert desc.charger_key, f"Description {desc.key} missing charger_key"
+
+    def test_description_keys_are_unique(self) -> None:
+        """Test that description keys (with uid fallback) are unique per platform."""
+        from custom_components.wattpilot.descriptions import (
+            BUTTON_DESCRIPTIONS,
+            NUMBER_DESCRIPTIONS,
+            SELECT_DESCRIPTIONS,
+            SENSOR_DESCRIPTIONS,
+            SWITCH_DESCRIPTIONS,
+            UPDATE_DESCRIPTIONS,
+        )
+
+        for name, descs in [
+            ("sensor", SENSOR_DESCRIPTIONS),
+            ("switch", SWITCH_DESCRIPTIONS),
+            ("number", NUMBER_DESCRIPTIONS),
+            ("select", SELECT_DESCRIPTIONS),
+            ("button", BUTTON_DESCRIPTIONS),
+            ("update", UPDATE_DESCRIPTIONS),
+        ]:
+            keys = [d.uid or d.charger_key for d in descs]
+            seen: set[str] = set()
+            duplicates = []
+            for key in keys:
+                if key in seen:
+                    duplicates.append(key)
+                seen.add(key)
+            assert not duplicates, f"Duplicate keys in {name}: {duplicates}"
 
 
 class TestAsyncSetup:

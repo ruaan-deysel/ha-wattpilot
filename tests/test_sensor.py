@@ -2,96 +2,89 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import yaml
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-# Path to the sensor.yaml configuration
-SENSOR_YAML_PATH = (
-    Path(__file__).parent.parent / "custom_components/wattpilot/sensor.yaml"
-)
+from custom_components.wattpilot.descriptions import WattpilotSensorEntityDescription
 
 
-def load_sensor_config() -> dict[str, Any]:
-    """Load the sensor YAML configuration."""
-    with SENSOR_YAML_PATH.open() as f:
-        return yaml.safe_load(f)
+def get_sensor_desc_by_key(charger_key: str) -> WattpilotSensorEntityDescription | None:
+    """Get a sensor description by its charger_key."""
+    from custom_components.wattpilot.descriptions import SENSOR_DESCRIPTIONS
 
-
-def get_sensor_by_id(sensor_id: str) -> dict[str, Any] | None:
-    """Get a sensor configuration by its ID."""
-    config = load_sensor_config()
     return next(
-        (s for s in config["sensor"] if s.get("id") == sensor_id),
+        (d for d in SENSOR_DESCRIPTIONS if d.charger_key == charger_key),
         None,
     )
 
 
-class TestSensorYamlConfiguration:
-    """Test sensor YAML configuration."""
+class TestSensorDescriptions:
+    """Test sensor entity descriptions."""
 
     def test_eto_sensor_has_correct_device_class(self) -> None:
         """Test eto sensor has energy device class for Energy Dashboard."""
-        eto_sensor = get_sensor_by_id("eto")
+        eto = get_sensor_desc_by_key("eto")
 
-        assert eto_sensor is not None
-        assert eto_sensor.get("device_class") == "energy"
-        assert eto_sensor.get("state_class") == "total_increasing"
-        assert eto_sensor.get("unit_of_measurement") == "Wh"
+        assert eto is not None
+        assert eto.device_class == SensorDeviceClass.ENERGY
+        assert eto.state_class == SensorStateClass.TOTAL_INCREASING
+        assert eto.native_unit_of_measurement == "Wh"
 
     def test_nrg_sensor_has_correct_device_class(self) -> None:
         """Test nrg sensor has power device class for Energy Dashboard."""
-        nrg_sensor = get_sensor_by_id("nrg")
+        nrg = get_sensor_desc_by_key("nrg")
 
-        assert nrg_sensor is not None
-        assert nrg_sensor.get("device_class") == "power"
-        assert nrg_sensor.get("state_class") == "measurement"
-        assert nrg_sensor.get("unit_of_measurement") == "W"
+        assert nrg is not None
+        assert nrg.device_class == SensorDeviceClass.POWER
+        assert nrg.state_class == SensorStateClass.MEASUREMENT
+        assert nrg.native_unit_of_measurement == "W"
 
     def test_wh_sensor_has_correct_device_class(self) -> None:
         """Test wh (session energy) sensor has correct config for Energy Dashboard."""
-        wh_sensor = get_sensor_by_id("wh")
+        wh = get_sensor_desc_by_key("wh")
 
-        assert wh_sensor is not None
-        assert wh_sensor.get("device_class") == "energy"
-        assert wh_sensor.get("state_class") == "total_increasing"
-        assert wh_sensor.get("unit_of_measurement") == "Wh"
+        assert wh is not None
+        assert wh.device_class == SensorDeviceClass.ENERGY
+        assert wh.state_class == SensorStateClass.TOTAL_INCREASING
+        assert wh.native_unit_of_measurement == "Wh"
 
-    def test_all_sensors_have_required_fields(self) -> None:
-        """Test all sensors have required id field."""
-        config = load_sensor_config()
+    def test_all_descriptions_have_charger_key(self) -> None:
+        """Test all sensor descriptions have charger_key."""
+        from custom_components.wattpilot.descriptions import SENSOR_DESCRIPTIONS
 
-        for sensor in config["sensor"]:
-            assert "id" in sensor, f"Sensor missing 'id': {sensor}"
+        for desc in SENSOR_DESCRIPTIONS:
+            assert desc.charger_key, f"Sensor {desc.key} missing charger_key"
 
     def test_energy_sensors_have_state_class(self) -> None:
         """Test all energy sensors have state_class for statistics."""
-        config = load_sensor_config()
+        from custom_components.wattpilot.descriptions import SENSOR_DESCRIPTIONS
 
         energy_sensors = [
-            s for s in config["sensor"] if s.get("device_class") == "energy"
+            d for d in SENSOR_DESCRIPTIONS if d.device_class == SensorDeviceClass.ENERGY
         ]
 
-        for sensor in energy_sensors:
-            assert sensor.get("state_class") in ["total", "total_increasing"], (
-                f"Energy sensor '{sensor.get('id')}' missing or invalid state_class"
-            )
+        for desc in energy_sensors:
+            assert desc.state_class in (
+                SensorStateClass.TOTAL,
+                SensorStateClass.TOTAL_INCREASING,
+            ), f"Energy sensor '{desc.charger_key}' missing or invalid state_class"
 
     def test_power_sensors_have_state_class(self) -> None:
         """Test all power sensors have state_class for statistics."""
-        config = load_sensor_config()
+        from custom_components.wattpilot.descriptions import SENSOR_DESCRIPTIONS
 
         power_sensors = [
-            s for s in config["sensor"] if s.get("device_class") == "power"
+            d for d in SENSOR_DESCRIPTIONS if d.device_class == SensorDeviceClass.POWER
         ]
 
-        for sensor in power_sensors:
-            assert sensor.get("state_class") == "measurement", (
-                f"Power sensor '{sensor.get('id')}' should have state_class=measurement"
+        for desc in power_sensors:
+            assert desc.state_class == SensorStateClass.MEASUREMENT, (
+                f"Power sensor '{desc.charger_key}' should have state_class=MEASUREMENT"
             )
 
 
@@ -136,32 +129,25 @@ class TestSensorEntity:
         charger.carConnected = "no car"
         return charger
 
-    def test_sensor_yaml_loads_successfully(self) -> None:
-        """Test that sensor.yaml loads without errors."""
-        config = load_sensor_config()
+    def test_sensor_descriptions_exist(self) -> None:
+        """Test that sensor descriptions are defined."""
+        from custom_components.wattpilot.descriptions import SENSOR_DESCRIPTIONS
 
-        assert "sensor" in config
-        assert len(config["sensor"]) > 0
+        assert len(SENSOR_DESCRIPTIONS) > 0
 
     def test_sensor_ids_are_unique(self) -> None:
-        """Test that all sensor IDs are unique (except for namespaced ones)."""
-        config = load_sensor_config()
+        """Test that all sensor IDs (uid or charger_key) are unique."""
+        from custom_components.wattpilot.descriptions import SENSOR_DESCRIPTIONS
 
-        # Collect IDs with their UIDs for uniqueness
-        id_uid_pairs = []
-        for sensor in config["sensor"]:
-            uid = sensor.get("uid", sensor.get("id"))
-            id_uid_pairs.append(uid)
-
-        # Check for duplicates
+        keys = [d.uid or d.charger_key for d in SENSOR_DESCRIPTIONS]
         seen: set[str] = set()
         duplicates = []
-        for item in id_uid_pairs:
-            if item in seen:
-                duplicates.append(item)
-            seen.add(item)
+        for key in keys:
+            if key in seen:
+                duplicates.append(key)
+            seen.add(key)
 
-        assert len(duplicates) == 0, f"Duplicate sensor UIDs found: {duplicates}"
+        assert not duplicates, f"Duplicate sensor UIDs found: {duplicates}"
 
 
 class TestEnergyDashboardCompatibility:
@@ -169,12 +155,8 @@ class TestEnergyDashboardCompatibility:
 
     def test_total_energy_sensor_compatible(self) -> None:
         """Test total energy sensor is compatible with Energy Dashboard device consumption."""
-        eto_sensor = get_sensor_by_id("eto")
+        eto = get_sensor_desc_by_key("eto")
 
-        # Energy Dashboard requires:
-        # - device_class: energy
-        # - state_class: total or total_increasing
-        # - unit: cal, Gcal, GJ, GWh, J, kcal, kJ, kWh, Mcal, MJ, MWh, mWh, TWh, Wh
         valid_energy_units = [
             "cal",
             "Gcal",
@@ -192,45 +174,43 @@ class TestEnergyDashboardCompatibility:
             "Wh",
         ]
 
-        assert eto_sensor is not None
-        assert eto_sensor.get("device_class") == "energy"
-        assert eto_sensor.get("state_class") in ["total", "total_increasing"]
-        assert eto_sensor.get("unit_of_measurement") in valid_energy_units
+        assert eto is not None
+        assert eto.device_class == SensorDeviceClass.ENERGY
+        assert eto.state_class in (
+            SensorStateClass.TOTAL,
+            SensorStateClass.TOTAL_INCREASING,
+        )
+        assert eto.native_unit_of_measurement in valid_energy_units
 
     def test_power_sensor_compatible(self) -> None:
         """Test power sensor is compatible with Energy Dashboard device power."""
-        nrg_sensor = get_sensor_by_id("nrg")
+        nrg = get_sensor_desc_by_key("nrg")
 
-        # Energy Dashboard power tracking requires:
-        # - device_class: power
-        # - state_class: measurement
-        # - unit: GW, kW, MW, mW, TW, W
         valid_power_units = ["GW", "kW", "MW", "mW", "TW", "W"]
 
-        assert nrg_sensor is not None
-        assert nrg_sensor.get("device_class") == "power"
-        assert nrg_sensor.get("state_class") == "measurement"
-        assert nrg_sensor.get("unit_of_measurement") in valid_power_units
+        assert nrg is not None
+        assert nrg.device_class == SensorDeviceClass.POWER
+        assert nrg.state_class == SensorStateClass.MEASUREMENT
+        assert nrg.native_unit_of_measurement in valid_power_units
 
     def test_session_energy_sensor_available(self) -> None:
         """Test session energy sensor is available for per-session tracking."""
-        wh_sensor = get_sensor_by_id("wh")
+        wh = get_sensor_desc_by_key("wh")
 
-        assert wh_sensor is not None
-        assert wh_sensor.get("device_class") == "energy"
-        assert wh_sensor.get("state_class") == "total_increasing"
+        assert wh is not None
+        assert wh.device_class == SensorDeviceClass.ENERGY
+        assert wh.state_class == SensorStateClass.TOTAL_INCREASING
 
     def test_energy_dashboard_documentation_in_description(self) -> None:
         """Test that Energy Dashboard sensors mention their purpose in description."""
-        eto_sensor = get_sensor_by_id("eto")
-        nrg_sensor = get_sensor_by_id("nrg")
+        eto = get_sensor_desc_by_key("eto")
+        nrg = get_sensor_desc_by_key("nrg")
 
-        assert eto_sensor is not None
-        assert nrg_sensor is not None
+        assert eto is not None
+        assert nrg is not None
 
-        # Check descriptions mention Energy Dashboard
-        eto_desc = eto_sensor.get("description", "").lower()
-        nrg_desc = nrg_sensor.get("description", "").lower()
+        eto_desc = (eto.description_text or "").lower()
+        nrg_desc = (nrg.description_text or "").lower()
 
         assert "energy dashboard" in eto_desc, (
             "eto sensor description should mention Energy Dashboard"
@@ -292,19 +272,33 @@ class TestSensorPlatformSetup:
 class TestChargerSensor:
     """Test ChargerSensor entity class."""
 
-    def test_sensor_device_class_conversion(
+    def _make_sensor_description(
+        self, **overrides: Any
+    ) -> WattpilotSensorEntityDescription:
+        """Create a WattpilotSensorEntityDescription for testing."""
+        from custom_components.wattpilot.descriptions import (
+            SOURCE_PROPERTY,
+            WattpilotSensorEntityDescription,
+        )
+
+        defaults = {
+            "key": "test_sensor",
+            "charger_key": "test_prop",
+            "source": SOURCE_PROPERTY,
+        }
+        defaults.update(overrides)
+        return WattpilotSensorEntityDescription(**defaults)
+
+    def _make_entry(
         self,
-        hass: HomeAssistant,
+        mock_config_entry_data: dict[str, Any],
         mock_charger: MagicMock,
-        mock_config_entry_data: dict,
         mock_coordinator: MagicMock,
-    ) -> None:
-        """Test sensor device_class string is converted to enum."""
-        from homeassistant.components.sensor import SensorDeviceClass
+    ) -> ConfigEntry:
+        """Create a ConfigEntry with runtime data."""
         from homeassistant.config_entries import ConfigEntry
 
         from custom_components.wattpilot.const import DOMAIN
-        from custom_components.wattpilot.sensor import ChargerSensor
         from custom_components.wattpilot.types import WattpilotRuntimeData
 
         entry = ConfigEntry(
@@ -328,24 +322,35 @@ class TestChargerSensor:
             debug_properties=False,
         )
         entry.runtime_data = runtime_data
+        return entry
 
-        entity_cfg = {
-            "id": "test_power_sensor_id",
-            "name": "Test Power Sensor",
-            "source": "property",
-            "namespace_id": 0,
-            "default_state": 0,
-            "device_class": "power",
-            "unit_of_measurement": "W",
-            "state_class": "measurement",
-        }
+    def test_sensor_device_class_conversion(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test sensor device_class is set from description."""
+        from homeassistant.components.sensor import SensorDeviceClass
+
+        from custom_components.wattpilot.sensor import ChargerSensor
+
+        entry = self._make_entry(mock_config_entry_data, mock_charger, mock_coordinator)
+        desc = self._make_sensor_description(
+            key="test_power",
+            charger_key="test_power_sensor_id",
+            device_class=SensorDeviceClass.POWER,
+            native_unit_of_measurement="W",
+            state_class=SensorStateClass.MEASUREMENT,
+        )
 
         with patch(
             "custom_components.wattpilot.entities.GetChargerProp",
             return_value=1000.0,
         ):
-            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
-            assert sensor._attr_device_class == SensorDeviceClass.POWER
+            sensor = ChargerSensor(hass, entry, desc, mock_charger)
+            assert sensor.device_class == SensorDeviceClass.POWER
 
     async def test_sensor_state_validation_with_enum(
         self,
@@ -355,48 +360,21 @@ class TestChargerSensor:
         mock_coordinator: MagicMock,
     ) -> None:
         """Test sensor state validation with enum mapping."""
-        from homeassistant.config_entries import ConfigEntry
-
-        from custom_components.wattpilot.const import DOMAIN
         from custom_components.wattpilot.sensor import ChargerSensor
-        from custom_components.wattpilot.types import WattpilotRuntimeData
 
-        entry = ConfigEntry(
-            version=1,
-            minor_version=0,
-            domain=DOMAIN,
-            title="Test Wattpilot",
-            data=mock_config_entry_data,
-            source="user",
-            unique_id="12345678",
-            discovery_keys={},
-            options={},
-            subentries_data={},
+        entry = self._make_entry(mock_config_entry_data, mock_charger, mock_coordinator)
+        desc = self._make_sensor_description(
+            key="test_enum",
+            charger_key="test_enum_sensor_id",
+            default_state="idle",
+            enum={0: "idle", 1: "charging", 2: "complete"},
         )
-
-        runtime_data = WattpilotRuntimeData(
-            charger=mock_charger,
-            coordinator=mock_coordinator,
-            push_entities={},
-            params=mock_config_entry_data,
-            debug_properties=False,
-        )
-        entry.runtime_data = runtime_data
-
-        entity_cfg = {
-            "id": "test_enum_sensor_id",
-            "name": "Test Enum Sensor",
-            "source": "property",
-            "namespace_id": 0,
-            "default_state": "idle",
-            "enum": {0: "idle", 1: "charging", 2: "complete"},
-        }
 
         with patch(
             "custom_components.wattpilot.entities.GetChargerProp",
             return_value=1,
         ):
-            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
+            sensor = ChargerSensor(hass, entry, desc, mock_charger)
             validated_state = await sensor._async_update_validate_platform_state(1)
             assert validated_state == "charging"
 
@@ -408,48 +386,21 @@ class TestChargerSensor:
         mock_coordinator: MagicMock,
     ) -> None:
         """Test sensor state validation with HTML unescaping."""
-        from homeassistant.config_entries import ConfigEntry
-
-        from custom_components.wattpilot.const import DOMAIN
         from custom_components.wattpilot.sensor import ChargerSensor
-        from custom_components.wattpilot.types import WattpilotRuntimeData
 
-        entry = ConfigEntry(
-            version=1,
-            minor_version=0,
-            domain=DOMAIN,
-            title="Test Wattpilot",
-            data=mock_config_entry_data,
-            source="user",
-            unique_id="12345678",
-            discovery_keys={},
-            options={},
-            subentries_data={},
+        entry = self._make_entry(mock_config_entry_data, mock_charger, mock_coordinator)
+        desc = self._make_sensor_description(
+            key="test_html",
+            charger_key="test_html_sensor_id",
+            default_state="",
+            html_unescape=True,
         )
-
-        runtime_data = WattpilotRuntimeData(
-            charger=mock_charger,
-            coordinator=mock_coordinator,
-            push_entities={},
-            params=mock_config_entry_data,
-            debug_properties=False,
-        )
-        entry.runtime_data = runtime_data
-
-        entity_cfg = {
-            "id": "test_html_sensor_id",
-            "name": "Test HTML Sensor",
-            "source": "property",
-            "namespace_id": 0,
-            "default_state": "",
-            "html_unescape": True,
-        }
 
         with patch(
             "custom_components.wattpilot.entities.GetChargerProp",
             return_value="&lt;test&gt;",
         ):
-            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
+            sensor = ChargerSensor(hass, entry, desc, mock_charger)
             validated_state = await sensor._async_update_validate_platform_state(
                 "&lt;test&gt;"
             )
@@ -463,49 +414,22 @@ class TestChargerSensor:
         mock_coordinator: MagicMock,
     ) -> None:
         """Test sensor state validation returns UNKNOWN for None."""
-        from homeassistant.config_entries import ConfigEntry
         from homeassistant.const import STATE_UNKNOWN
 
-        from custom_components.wattpilot.const import DOMAIN
         from custom_components.wattpilot.sensor import ChargerSensor
-        from custom_components.wattpilot.types import WattpilotRuntimeData
 
-        entry = ConfigEntry(
-            version=1,
-            minor_version=0,
-            domain=DOMAIN,
-            title="Test Wattpilot",
-            data=mock_config_entry_data,
-            source="user",
-            unique_id="12345678",
-            discovery_keys={},
-            options={},
-            subentries_data={},
+        entry = self._make_entry(mock_config_entry_data, mock_charger, mock_coordinator)
+        desc = self._make_sensor_description(
+            key="test_none",
+            charger_key="test_sensor_id",
+            default_state=None,
         )
-
-        runtime_data = WattpilotRuntimeData(
-            charger=mock_charger,
-            coordinator=mock_coordinator,
-            push_entities={},
-            params=mock_config_entry_data,
-            debug_properties=False,
-        )
-        entry.runtime_data = runtime_data
-
-        entity_cfg = {
-            "id": "test_sensor_id",
-            "name": "Test Sensor",
-            "source": "property",
-            "namespace_id": 0,
-            "default_state": None,
-        }
 
         with patch(
             "custom_components.wattpilot.entities.GetChargerProp",
             return_value=None,
         ):
-            sensor = ChargerSensor(hass, entry, entity_cfg, mock_charger)
-            # Set the required attribute to avoid AttributeError
+            sensor = ChargerSensor(hass, entry, desc, mock_charger)
             sensor._attr_native_unit_of_measurement = None
             validated_state = await sensor._async_update_validate_platform_state(None)
             assert validated_state == STATE_UNKNOWN
