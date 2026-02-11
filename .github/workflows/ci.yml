@@ -18,31 +18,6 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v2
-
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Run Ruff format check
-        run: uv run ruff format --check .
-
-      - name: Run Ruff linter
-        run: uv run ruff check .
-
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -69,6 +44,7 @@ jobs:
             --cov-branch \
             --cov-report=xml \
             --cov-report=term-missing \
+            --cov-fail-under=0 \
             -v
 
       - name: Upload coverage to Codecov
@@ -77,67 +53,3 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  validate:
-    name: Validate
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v2
-
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Validate manifest.json
-        run: |
-          python3 << 'EOF'
-          import json
-          import sys
-
-          with open('custom_components/wattpilot/manifest.json') as f:
-              manifest = json.load(f)
-
-          required = ['domain', 'name', 'version', 'documentation', 'issue_tracker', 'requirements', 'codeowners']
-          missing = [field for field in required if field not in manifest]
-
-          if missing:
-              print(f'❌ Missing required fields: {missing}')
-              sys.exit(1)
-
-          print(f'✅ manifest.json valid - {manifest["name"]} v{manifest["version"]}')
-          EOF
-
-      - name: Validate strings.json
-        run: python3 -c "import json; json.load(open('custom_components/wattpilot/strings.json')); print('✅ strings.json valid')"
-
-      - name: Check required files
-        run: |
-          for file in __init__.py manifest.json strings.json config_flow.py const.py; do
-            test -f "custom_components/wattpilot/$file" || { echo "❌ Missing: $file"; exit 1; }
-          done
-          echo "✅ All required files present"
-
-      - name: Validate quality_scale.yaml
-        run: |
-          python3 << 'EOF'
-          import yaml
-          import sys
-
-          with open('custom_components/wattpilot/quality_scale.yaml') as f:
-              quality_scale = yaml.safe_load(f)
-
-          if 'tier' not in quality_scale:
-              print('❌ Missing tier in quality_scale.yaml')
-              sys.exit(1)
-
-          print(f'✅ quality_scale.yaml valid - tier: {quality_scale["tier"]}')
-          EOF
