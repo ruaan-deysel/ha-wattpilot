@@ -227,6 +227,7 @@ class TestEntityDescriptions:
 class TestAsyncSetup:
     """Test async_setup function."""
 
+    @pytest.mark.asyncio
     async def test_async_setup_returns_true(self, hass: HomeAssistant) -> None:
         """Test that async_setup returns True."""
         from custom_components.wattpilot import async_setup
@@ -238,6 +239,7 @@ class TestAsyncSetup:
 class TestAsyncSetupEntry:
     """Test async_setup_entry function."""
 
+    @pytest.mark.asyncio
     async def test_setup_entry_requires_charger_connection(
         self,
         hass: HomeAssistant,
@@ -267,6 +269,7 @@ class TestAsyncSetupEntry:
         with pytest.raises(ConfigEntryNotReady):
             await async_setup_entry(hass, entry)
 
+    @pytest.mark.asyncio
     async def test_setup_entry_connection_fails(
         self,
         hass: HomeAssistant,
@@ -301,6 +304,7 @@ class TestAsyncSetupEntry:
         ):
             await async_setup_entry(hass, entry)
 
+    @pytest.mark.asyncio
     async def test_setup_entry_coordinator_fails(
         self,
         hass: HomeAssistant,
@@ -344,6 +348,7 @@ class TestAsyncSetupEntry:
 class TestAsyncUnloadEntry:
     """Test async_unload_entry function."""
 
+    @pytest.mark.asyncio
     async def test_unload_entry_disconnects_charger(
         self,
         hass: HomeAssistant,
@@ -386,6 +391,7 @@ class TestAsyncUnloadEntry:
             result = await async_unload_entry(hass, entry)
             assert isinstance(result, bool)
 
+    @pytest.mark.asyncio
     async def test_unload_entry_platform_fails(
         self,
         hass: HomeAssistant,
@@ -430,6 +436,7 @@ class TestAsyncUnloadEntry:
 class TestOptionsUpdateListener:
     """Test options update listener."""
 
+    @pytest.mark.asyncio
     async def test_options_update_listener_success(
         self,
         hass: HomeAssistant,

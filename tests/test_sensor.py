@@ -223,6 +223,7 @@ class TestEnergyDashboardCompatibility:
 class TestSensorPlatformSetup:
     """Test sensor platform setup."""
 
+    @pytest.mark.asyncio
     async def test_async_setup_entry_success(
         self,
         hass: HomeAssistant,
@@ -322,7 +323,8 @@ class TestChargerSensor:
         entry.runtime_data = runtime_data
         return entry
 
-    def test_sensor_device_class_conversion(
+    @pytest.mark.asyncio
+    async def test_sensor_device_class_conversion(
         self,
         hass: HomeAssistant,
         mock_charger: MagicMock,
@@ -350,6 +352,7 @@ class TestChargerSensor:
             sensor = ChargerSensor(hass, entry, desc, mock_charger)
             assert sensor.device_class == SensorDeviceClass.POWER
 
+    @pytest.mark.asyncio
     async def test_sensor_state_validation_with_enum(
         self,
         hass: HomeAssistant,
@@ -376,6 +379,7 @@ class TestChargerSensor:
             validated_state = await sensor._async_update_validate_platform_state(1)
             assert validated_state == "charging"
 
+    @pytest.mark.asyncio
     async def test_sensor_state_validation_html_unescape(
         self,
         hass: HomeAssistant,
@@ -404,6 +408,7 @@ class TestChargerSensor:
             )
             assert validated_state == "<test>"
 
+    @pytest.mark.asyncio
     async def test_sensor_state_validation_none_returns_unknown(
         self,
         hass: HomeAssistant,
