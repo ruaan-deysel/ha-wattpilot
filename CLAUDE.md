@@ -30,12 +30,12 @@ pre-commit run --all-files      # Run all pre-commit hooks
 ### Development Environment
 
 ```bash
-./scripts/setup                 # Install dependencies from requirements.txt
-pip install -e ".[dev]"         # Install with dev dependencies
+./scripts/setup                 # Install uv and sync dependencies
+uv sync --group dev             # Install with dev dependencies
 ./scripts/develop               # Start Home Assistant dev instance with this integration
 ```
 
-The dev instance uses `config/` directory for Home Assistant configuration and sets `PYTHONPATH` to include `custom_components/` to load the integration.
+The project uses `uv` for dependency management with `pyproject.toml` as the source of truth. The dev instance uses `config/` directory for Home Assistant configuration and sets `PYTHONPATH` to include `custom_components/` to load the integration.
 
 ## Architecture
 
@@ -45,8 +45,8 @@ The dev instance uses `config/` directory for Home Assistant configuration and s
 
 - `async_setup_entry`: Main setup flow - connects charger, creates coordinator, registers services, forwards to platforms
 - `async_unload_entry`: Cleanup - unloads platforms, disconnects charger, removes event handlers
-- Services are registered globally once across all config entries (tracked by `_SERVICES_REGISTERED`)
-- Property update handler bridges WebSocket events to entity updates via `PropertyUpdateHandler`
+- Services are registered globally once across all config entries (tracked in `hass.data[DOMAIN]['services_registered']`)
+- Property update handler bridges WebSocket events to entity updates via `async_property_update_handler` (async function)
 
 **Data Flow**
 
@@ -57,9 +57,9 @@ Wattpilot WebSocket (push) → PropertyUpdateHandler → Coordinator → Coordin
 **DataUpdateCoordinator (`coordinator.py`)**
 
 - `WattpilotCoordinator`: Wraps WebSocket push-based updates (no polling by default)
-- `available` property: Checks `charger.connected` and `charger.allPropsInitialized`
+- `available` property: Checks `charger.connected` and `charger.properties_initialized`
 - `async_handle_property_update`: Called when WebSocket receives property updates
-- `_async_update_data`: Validates connection state and returns `charger.allProps`
+- `_async_update_data`: Validates connection state and returns `charger.all_properties`
 
 **Runtime Data (`types.py`)**
 
@@ -82,40 +82,50 @@ Wattpilot WebSocket (push) → PropertyUpdateHandler → Coordinator → Coordin
 **Platform Implementation Pattern**
 Each platform (sensor, switch, button, number, select, update) follows this pattern:
 
-1. YAML file (e.g., `sensor.yaml`) defines entity configurations
+1. Entity descriptions are defined in `descriptions.py` as dataclass instances (e.g., `WattpilotSensorEntityDescription`)
 2. Python file (e.g., `sensor.py`) implements the platform:
-   - `async_setup_entry`: Loads YAML config, creates entities from config
+   - `async_setup_entry`: Loads descriptions via `filter_descriptions()`, creates entities from descriptions
    - Platform-specific entity class inherits from `ChargerPlatformEntity`
    - Implements required properties/methods for the platform type
 
-### Entity Configuration System
+### Entity Description System
 
-Entities are defined in YAML files (`sensor.yaml`, `switch.yaml`, etc.) with this structure:
+Entities are defined as Python dataclasses in `descriptions.py` with this structure:
 
-```yaml
-entities:
-  - id: property_identifier # Wattpilot property ID
-    name: "Display Name" # Entity name
-    source: property|attribute # Data source type
-    firmware: ">=1.0.0" # Optional: minimum firmware version
-    variant: "Home|Flex" # Optional: supported device variants
-    connection: "local|cloud" # Optional: supported connection types
-    device_class: ... # Platform-specific attributes
-    enabled: true|false # Default enabled state
+```python
+WattpilotSensorEntityDescription(
+    key="session_energy",
+    charger_key="wh",  # go-eCharger API key
+    name="Session Energy",
+    source=SOURCE_PROPERTY,  # "property" | "attribute" | "namespacelist"
+    device_class=SensorDeviceClass.ENERGY,
+    firmware=">=38.5",  # Optional: minimum firmware version
+    variant="11",        # Optional: supported device variants
+    connection="local",  # Optional: supported connection types
+)
 ```
 
-The system supports conditional entity creation based on firmware version, device variant, and connection type.
+The `filter_descriptions()` helper filters entities by firmware version, device variant, and connection type at setup time.
 
-### Vendored Wattpilot Module
+### External Wattpilot API Package
 
-The `custom_components/wattpilot/wattpilot/` directory contains a vendored copy of the `wattpilot` Python module (originally from joscha82/wattpilot). This module handles:
+The integration uses the external `wattpilot-api>=1.0.0` package (installed via `uv sync`). This package handles:
 
 - WebSocket connection management (local and cloud)
-- Property parsing and updates
+- Property parsing and updates via `charger.all_properties` dict
 - Charger model and variant detection
-- Event handling system
+- Async-friendly event callback system via `charger.on_property_change()`
 
-Do not modify files in `custom_components/wattpilot/wattpilot/` - they are excluded from linting, formatting, and testing.
+Key types:
+
+```python
+from wattpilot_api import Wattpilot, LoadMode, CarStatus
+charger = Wattpilot(host, password)
+await charger.connect()
+charger.all_properties  # Dict of all current properties
+charger.properties_initialized  # Boolean - all properties loaded
+unsub = charger.on_property_change(async_callback)  # Subscribe to updates
+```
 
 ## Configuration & Standards
 
@@ -167,10 +177,11 @@ Services are registered once globally (not per config entry) and use `async_regi
 
 **Adding a New Entity**
 
-1. Add entity configuration to the appropriate YAML file (e.g., `sensor.yaml`)
-2. If adding a new platform, create corresponding Python file following existing patterns
-3. For existing platforms, the entity will be auto-created from YAML config
-4. Add tests in `tests/test_<platform>.py`
+1. Find the charger API key in [go-eCharger API v2 documentation](https://github.com/goecharger/go-eCharger-API-v2/blob/main/apikeys-en.md)
+2. Add entity description to `descriptions.py` (e.g., `WattpilotSensorEntityDescription`)
+3. Add description to appropriate `XXX_DESCRIPTIONS` list in `descriptions.py`
+4. Platform's `async_setup_entry` automatically creates entity from description via `filter_descriptions()`
+5. Add tests in `tests/test_<platform>.py`
 
 **Accessing Charger Data**
 
