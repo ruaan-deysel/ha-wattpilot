@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -259,7 +259,7 @@ class TestSensorPlatformSetup:
         )
         entry.runtime_data = runtime_data
 
-        async_add_entities = AsyncMock()
+        async_add_entities = MagicMock()
 
         with patch(
             "custom_components.wattpilot.entities.GetChargerProp",

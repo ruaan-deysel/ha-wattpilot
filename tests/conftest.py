@@ -105,7 +105,7 @@ def mock_hass() -> MagicMock:
 
     # Add services mock
     hass.services = MagicMock()
-    hass.services.async_register = AsyncMock()
+    hass.services.async_register = MagicMock()
     hass.services.has_service = MagicMock(return_value=False)
 
     return hass
