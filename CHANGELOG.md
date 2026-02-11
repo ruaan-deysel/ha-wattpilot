@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pre-commit Hooks**: Configured pre-commit with ruff, codespell, yamllint, and prettier for code quality
 - **CI/CD Workflow**: Added continuous integration with pytest, coverage reporting, and Codecov integration
 - **Energy Dashboard Compatibility**: Fixed `SensorDeviceClass` enum conversion for proper Energy Dashboard integration
+- **UV Dependency Management**: Migrated from pip/Poetry to uv with PEP 621 pyproject.toml for faster dependency resolution
+- **UV Pre-commit Hook**: Added `uv-lock-check` hook to validate lock file synchronization
+- **Translation Enhancements**: Added missing `invalid_connection` abort reason and `update_failed`, `entry_cannot_connect` exception keys
 
 ### Changed
 
@@ -30,12 +33,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sensor Configuration**: Enhanced Energy Dashboard sensor descriptions and updated state classes (`total_increasing` for energy sensors)
 - **Test Configuration**: Enhanced pytest configuration with async support and coverage settings
 - **Documentation**: Updated README with improved badges and codecov integration
+- **Build Backend**: Switched from poetry-core to hatchling for PEP 621 compliance
+- **Python Requirement**: Updated to >=3.13.2 matching Home Assistant core requirements
+- **Scripts**: Updated setup, lint, and test scripts to use `uv run` commands
+- **Translation Keys**: Aligned options flow step keys across all translation files (config_connection, config_local, config_cloud)
+
+### Removed
+
+- **Dead Code**: Removed unused constants (FUNC_OPTION_UPDATES, FUNC_PROPERTY_UPDATES_CALLBACK, CONF_CHARGERS, CONF_DBG_PROPS)
+- **Dead Attributes**: Removed write-only entity attributes (\_fw_supported, \_variant_supported, \_connection_supported)
+- **Dead Methods**: Removed unused `_get_platform_specific_state()` from number.py
+- **Dead Fields**: Removed `debug_properties` field and all references, `id_status` field from update entity descriptions
+- **Dead Test Code**: Removed unused test fixture `get_expected_entity_states()` and expected_entity_states.json
+- **Redundant Code**: Removed 5 gratuitous `asyncio.sleep(0)` calls and resulting dead asyncio imports
+- **Redundant Icons**: Removed 64 redundant `icon=` attributes from descriptions.py (icons.json provides all entity icons)
+- **Dead Translations**: Removed unused exception keys (charger_not_found, connection_failed, invalid_property)
+- **Requirements.txt**: Removed in favor of uv.lock as single source of truth
+- **Embedded Library**: Removed embedded wattpilot library files (now using wattpilot-api package exclusively)
 
 ### Fixed
 
 - **Sensor Device Classes**: Fixed device_class string to enum conversion preventing Energy Dashboard recognition
 - **Availability Handling**: Entities now properly check coordinator availability before reporting their own status
 - **Error Logging**: Improved logging when charger becomes unavailable with translation support
+- **Translation Formatting**: Fixed corrupted escaped quotes in German translations (de.json)
+- **Code Quality**: Replaced unnecessary lambda wrapper in test fixtures (ruff PLW0108)
 
 ## [0.4.2] - 2025-12-09
 
