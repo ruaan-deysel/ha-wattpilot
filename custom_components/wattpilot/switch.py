@@ -138,10 +138,9 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
         """Async: Turn entity on."""
         try:
             _LOGGER.debug(
-                "%s - %s: async_turn_on: %s",
+                "%s - %s: async_turn_on",
                 self._charger_id,
                 self._identifier,
-                self._attr_name,
             )
             value = not self.entity_description.invert
             await async_SetChargerProp(self._charger, self._identifier, value)
@@ -154,10 +153,9 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
         """Async: Turn entity off."""
         try:
             _LOGGER.debug(
-                "%s - %s: async_turn_off: %s",
+                "%s - %s: async_turn_off",
                 self._charger_id,
                 self._identifier,
-                self._attr_name,
             )
             value = self.entity_description.invert
             await async_SetChargerProp(self._charger, self._identifier, value)

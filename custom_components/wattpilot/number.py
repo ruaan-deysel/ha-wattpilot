@@ -98,10 +98,6 @@ class ChargerNumber(ChargerPlatformEntity, NumberEntity):
         if desc.mode is not None:
             self._attr_mode = desc.mode
 
-    def _get_platform_specific_state(self) -> Any:
-        """Platform specific init actions."""
-        return self.state
-
     @property
     def native_value(self) -> float | None:
         """Return the current value, handling list/tuple values from charger."""
@@ -146,15 +142,9 @@ class ChargerNumber(ChargerPlatformEntity, NumberEntity):
                 value,
             )
             if self._identifier == "fte":
-                _LOGGER.debug(
-                    "%s - %s: async_set_native_value: apply ugly workaround to always set next trip distance to kWH instead of KM",
-                    self._charger_id,
-                    self._identifier,
-                )
-                await async_SetChargerProp(self._charger, "esk", True)
-            await async_SetChargerProp(
-                self._charger, self._identifier, value, force_type=self._set_type
-            )
+                await self._charger.set_next_trip_energy(value)
+            else:
+                await async_SetChargerProp(self._charger, self._identifier, value)
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: update failed: %s (%s.%s)",

@@ -49,7 +49,7 @@ async def async_setup_entry(
     entities: list[ChargerButton] = []
     for desc in descriptions:
         entity = ChargerButton(hass, entry, desc, charger)
-        if entity is None:
+        if getattr(entity, "_init_failed", True):
             continue
         entities.append(entity)
 
@@ -89,8 +89,6 @@ class ChargerButton(ChargerPlatformEntity, ButtonEntity):
                 self._charger,
                 self._identifier,
                 self.entity_description.set_value,
-                force=True,
-                force_type=self._set_type,
             )
         except Exception as e:
             _LOGGER.error(

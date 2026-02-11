@@ -18,12 +18,12 @@ async def setup_wattpilot_integration(
     if mock_charger is None:
         # Create a basic mock charger
         mock_charger = MagicMock()
-        mock_charger.allPropsInitialized = True
+        mock_charger.properties_initialized = True
         mock_charger.connected = True
         mock_charger.name = "Test Wattpilot"
         mock_charger.serial = "12345678"
         mock_charger.firmware = "40.7"
-        mock_charger.allProps = {}
+        mock_charger.all_properties = {}
 
     # Return a minimal ConfigEntry for testing
     entry = MagicMock(spec=ConfigEntry)

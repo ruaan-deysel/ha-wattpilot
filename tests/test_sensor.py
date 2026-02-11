@@ -99,8 +99,8 @@ class TestSensorEntity:
         charger.name = "Test Wattpilot"
         charger.firmware = "40.7"
         charger.connected = True
-        charger.allPropsInitialized = True
-        charger.allProps = {
+        charger.properties_initialized = True
+        charger.all_properties = {
             "car": 1,
             "amp": 6,
             "eto": 12345,
@@ -125,8 +125,8 @@ class TestSensorEntity:
             ],
             "onv": "40.7",
         }
-        charger.AccessState = "open"
-        charger.carConnected = "no car"
+        charger.access_state = "open"
+        charger.car_connected = "no car"
         return charger
 
     def test_sensor_descriptions_exist(self) -> None:
@@ -255,7 +255,6 @@ class TestSensorPlatformSetup:
             coordinator=mock_coordinator,
             push_entities={},
             params=mock_config_entry_data,
-            debug_properties=False,
         )
         entry.runtime_data = runtime_data
 
@@ -319,7 +318,6 @@ class TestChargerSensor:
             coordinator=mock_coordinator,
             push_entities={},
             params=mock_config_entry_data,
-            debug_properties=False,
         )
         entry.runtime_data = runtime_data
         return entry

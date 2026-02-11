@@ -68,7 +68,7 @@ class WattpilotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Return if the charger is available."""
         return bool(
             getattr(self.charger, "connected", False)
-            and getattr(self.charger, "allPropsInitialized", False)
+            and getattr(self.charger, "properties_initialized", False)
         )
 
     @callback
@@ -127,7 +127,7 @@ class WattpilotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Return current properties from charger
         try:
-            all_props = getattr(self.charger, "allProps", {})
+            all_props = getattr(self.charger, "all_properties", {})
             if all_props is None:
                 all_props = {}
             return dict(all_props)
@@ -153,21 +153,3 @@ class WattpilotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "error": str(err),
                 },
             ) from err
-
-    @callback
-    def async_log_unavailable(self) -> None:
-        """Log when the charger becomes unavailable."""
-        _LOGGER.warning(
-            "Charger %s (%s) is now unavailable",
-            self.charger_name,
-            self.charger_serial,
-        )
-
-    @callback
-    def async_log_available(self) -> None:
-        """Log when the charger becomes available again."""
-        _LOGGER.info(
-            "Charger %s (%s) is now available",
-            self.charger_name,
-            self.charger_serial,
-        )

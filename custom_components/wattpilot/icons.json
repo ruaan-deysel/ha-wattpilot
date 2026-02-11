@@ -1,13 +1,213 @@
 {
+  "entity": {
+    "button": {
+      "authenticate": {
+        "default": "mdi:credit-card-wireless-outline"
+      },
+      "start_charging": {
+        "default": "mdi:play"
+      },
+      "start_charging_force": {
+        "default": "mdi:play-circle-outline"
+      },
+      "stop_charging": {
+        "default": "mdi:stop"
+      }
+    },
+    "number": {
+      "boost_discharges_until": {
+        "default": "mdi:power-plug-battery"
+      },
+      "max_charging_current": {
+        "default": "mdi:car-electric"
+      },
+      "max_price": {
+        "default": "mdi:cash-100"
+      },
+      "min_charging_time": {
+        "default": "mdi:car-clock"
+      },
+      "next_trip_charging": {
+        "default": "mdi:road-variant"
+      },
+      "ohmpilot_threshold": {
+        "default": "mdi:thermometer-water"
+      },
+      "phase_switch_delay": {
+        "default": "mdi:solar-power"
+      },
+      "phase_switch_interval": {
+        "default": "mdi:sun-clock-outline"
+      },
+      "pv_battery_discharges_until": {
+        "default": "mdi:power-plug-battery"
+      },
+      "pv_battery_threshold": {
+        "default": "mdi:battery-charging-medium"
+      },
+      "start_charging_at": {
+        "default": "mdi:solar-power"
+      },
+      "three_phase_power_level": {
+        "default": "mdi:connection"
+      }
+    },
+    "select": {
+      "access_control": {
+        "default": "mdi:access-point-check"
+      },
+      "awattar_country": {
+        "default": "mdi:map-marker"
+      },
+      "boost_type": {
+        "default": "mdi:battery-clock"
+      },
+      "cable_unlock_select": {
+        "default": "mdi:lock-outline"
+      },
+      "charging_mode": {
+        "default": "mdi:leaf"
+      },
+      "daylight_saving": {
+        "default": "mdi:map-clock"
+      },
+      "lock_level_selection": {
+        "default": "mdi:account-cancel"
+      },
+      "phase_switch": {
+        "default": "mdi:car-3-plus"
+      }
+    },
+    "sensor": {
+      "access_state": {
+        "default": "mdi:lock-question"
+      },
+      "cable_unlock": {
+        "default": "mdi:state-machine"
+      },
+      "car_connected": {
+        "default": "mdi:ev-plug-type2"
+      },
+      "car_state": {
+        "default": "mdi:state-machine"
+      },
+      "charger_temp": {
+        "default": "mdi:thermometer"
+      },
+      "charging_power": {
+        "default": "mdi:lightning-bolt-circle"
+      },
+      "charging_reason": {
+        "default": "mdi:ev-station"
+      },
+      "effective_lock_setting": {
+        "default": "mdi:lock"
+      },
+      "http_clients": {
+        "default": "mdi:web-box"
+      },
+      "id_chip": {
+        "default": "mdi:credit-card-chip"
+      },
+      "id_chip_current": {
+        "default": "mdi:credit-card-wireless"
+      },
+      "internal_error": {
+        "default": "mdi:alert-circle"
+      },
+      "inverter": {
+        "default": "mdi:solar-power"
+      },
+      "local_time": {
+        "default": "mdi:clock-outline"
+      },
+      "lock_feedback": {
+        "default": "mdi:lock-reset"
+      },
+      "reboot_counter": {
+        "default": "mdi:restart"
+      },
+      "reboot_timer": {
+        "default": "mdi:av-time"
+      },
+      "session_energy": {
+        "default": "mdi:ev-station"
+      },
+      "total_energy": {
+        "default": "mdi:meter-electric"
+      },
+      "webserver_queue": {
+        "default": "mdi:web-sync"
+      },
+      "websocket_clients": {
+        "default": "mdi:web-box"
+      },
+      "wifi_connection": {
+        "default": "mdi:wifi"
+      },
+      "wifi_signal": {
+        "default": "mdi:wifi"
+      },
+      "wifi_state": {
+        "default": "mdi:wifi-settings"
+      }
+    },
+    "switch": {
+      "auto_disable_hotspot": {
+        "default": "mdi:wifi-cog"
+      },
+      "boost": {
+        "default": "mdi:home-battery"
+      },
+      "charge_pause": {
+        "default": "mdi:motion-pause"
+      },
+      "discharge_pv_battery": {
+        "default": "mdi:battery-arrow-down-outline"
+      },
+      "ground_check": {
+        "default": "mdi:home-floor-g"
+      },
+      "led_energy_saving": {
+        "default": "mdi:led-off"
+      },
+      "load_balancing": {
+        "default": "mdi:scale-balance"
+      },
+      "lock_level_selection": {
+        "default": "mdi:account-cancel"
+      },
+      "lumina_strom_awattar": {
+        "default": "mdi:chart-timeline-variant"
+      },
+      "network_time_protocol": {
+        "default": "mdi:timeline-clock-outline"
+      },
+      "pv_surplus": {
+        "default": "mdi:solar-power"
+      },
+      "remain_in_eco_mode": {
+        "default": "mdi:leaf-circle-outline"
+      },
+      "simulate_unplugging": {
+        "default": "mdi:connection"
+      },
+      "unlock_power_outage": {
+        "default": "mdi:transmission-tower-off"
+      }
+    },
+    "update": {
+      "firmware_update": {
+        "default": "mdi:update"
+      }
+    }
+  },
   "services": {
     "set_next_trip": {
       "service": "mdi:calendar-clock"
     },
     "set_goe_cloud": {
       "service": "mdi:cloud-sync"
-    },
-    "set_debug_properties": {
-      "service": "mdi:bug"
     },
     "disconnect_charger": {
       "service": "mdi:power-plug-off"

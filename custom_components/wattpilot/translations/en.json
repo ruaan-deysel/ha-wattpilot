@@ -64,7 +64,8 @@
     "abort": {
       "single_instance_allowed": "Only a single configuration instance is allowed.",
       "exception": "An unknown exception occurred during options flow - check log for details.",
-      "not_supported": "The current workflow is not supported yet. Please wait for version update."
+      "not_supported": "The current workflow is not supported yet. Please wait for version update.",
+      "invalid_connection": "Invalid connection type selected."
     },
     "error": {
       "cannot_connect": "Failed to connect to the charger. Please check the IP address and password.",
@@ -76,7 +77,17 @@
         "title": "Wattpilot Options",
         "description": "Configure your Wattpilot charger options."
       },
-      "local": {
+      "config_connection": {
+        "title": "Connection Type",
+        "description": "Select how to connect to your charger.",
+        "data": {
+          "connection": "Connection type"
+        },
+        "data_description": {
+          "connection": "Local connection uses the charger's IP address. Cloud connection uses the serial number."
+        }
+      },
+      "config_local": {
         "title": "Local Connection Options",
         "description": "Update the connection settings for your locally connected Wattpilot charger.",
         "data": {
@@ -92,7 +103,7 @@
           "timeout": "Timeout in seconds for connection and initialization (default: 30)."
         }
       },
-      "cloud": {
+      "config_cloud": {
         "title": "Cloud Connection Options",
         "description": "Update cloud connection settings for your Wattpilot charger.",
         "data": {
@@ -139,20 +150,6 @@
         }
       }
     },
-    "set_debug_properties": {
-      "name": "Set debug properties",
-      "description": "Enable or disable logging of charger property changes as warnings in logs.",
-      "fields": {
-        "device_id": {
-          "name": "Charger",
-          "description": "The charger device to configure."
-        },
-        "debug_properties": {
-          "name": "Debug properties",
-          "description": "Set to true to debug all properties, false to debug none, or provide a list of specific properties to debug."
-        }
-      }
-    },
     "disconnect_charger": {
       "name": "Disconnect charger",
       "description": "Disconnect an established charger connection. Entities will become unavailable.",
@@ -174,18 +171,221 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "access_state": {
+        "name": "Access State"
+      },
+      "car_connected": {
+        "name": "Car Connected"
+      },
+      "id_chip": {
+        "name": "ID Chip"
+      },
+      "car_state": {
+        "name": "Car State"
+      },
+      "inverter": {
+        "name": "Inverter"
+      },
+      "wifi_connection": {
+        "name": "WiFi Connection"
+      },
+      "cable_unlock": {
+        "name": "Cable Unlock"
+      },
+      "internal_error": {
+        "name": "Internal Error"
+      },
+      "total_energy": {
+        "name": "Totally Charged"
+      },
+      "lock_feedback": {
+        "name": "Lock Feedback"
+      },
+      "effective_lock_setting": {
+        "name": "Effective Lock Setting"
+      },
+      "local_time": {
+        "name": "Local Time"
+      },
+      "charging_reason": {
+        "name": "Charging Reason"
+      },
+      "charging_power": {
+        "name": "Charging Power"
+      },
+      "webserver_queue": {
+        "name": "Webserver Queue"
+      },
+      "reboot_counter": {
+        "name": "Reboot Counter"
+      },
+      "reboot_timer": {
+        "name": "Reboot Timer"
+      },
+      "wifi_signal": {
+        "name": "WiFi Signal"
+      },
+      "charger_temp": {
+        "name": "Charger Temp"
+      },
+      "id_chip_current": {
+        "name": "ID Chip Current"
+      },
+      "http_clients": {
+        "name": "HTTP Clients"
+      },
+      "websocket_clients": {
+        "name": "WebSocket Clients"
+      },
+      "session_energy": {
+        "name": "Connection Charged"
+      },
+      "wifi_state": {
+        "name": "WiFi State"
+      }
+    },
+    "switch": {
+      "lock_level_selection": {
+        "name": "Lock Level Selection"
+      },
+      "boost": {
+        "name": "Boost"
+      },
+      "charge_pause": {
+        "name": "Charge Pause"
+      },
+      "remain_in_eco_mode": {
+        "name": "Remain in Eco Mode"
+      },
+      "lumina_strom_awattar": {
+        "name": "Lumina Strom aWattar"
+      },
+      "pv_surplus": {
+        "name": "PV Surplus"
+      },
+      "load_balancing": {
+        "name": "Load Balancing"
+      },
+      "led_energy_saving": {
+        "name": "LED EnergySaving"
+      },
+      "ground_check": {
+        "name": "Ground Check"
+      },
+      "discharge_pv_battery": {
+        "name": "Discharge PV Battery"
+      },
+      "simulate_unplugging": {
+        "name": "Simulate Unplugging"
+      },
+      "network_time_protocol": {
+        "name": "Network Time Protocol"
+      },
+      "unlock_power_outage": {
+        "name": "Unlock Power Outage"
+      },
+      "auto_disable_hotspot": {
+        "name": "Auto Disable Hotspot"
+      }
+    },
+    "number": {
+      "max_charging_current": {
+        "name": "Max Charging Current"
+      },
+      "max_price": {
+        "name": "Max Price"
+      },
+      "boost_discharges_until": {
+        "name": "Boost discharges until"
+      },
+      "pv_battery_threshold": {
+        "name": "PV Battery threshold"
+      },
+      "min_charging_time": {
+        "name": "Min Charging Time"
+      },
+      "ohmpilot_threshold": {
+        "name": "Ohmpilot threshold"
+      },
+      "start_charging_at": {
+        "name": "Start Charging at"
+      },
+      "next_trip_charging": {
+        "name": "Next Trip Charging"
+      },
+      "phase_switch_delay": {
+        "name": "Phase Switch Delay"
+      },
+      "phase_switch_interval": {
+        "name": "Phase Switch Interval"
+      },
+      "pv_battery_discharges_until": {
+        "name": "PV Battery discharges until"
+      },
+      "three_phase_power_level": {
+        "name": "Three Phase Power Level"
+      }
+    },
+    "select": {
+      "access_control": {
+        "name": "Access Control"
+      },
+      "awattar_country": {
+        "name": "Awattar Country"
+      },
+      "lock_level_selection": {
+        "name": "Lock level selection"
+      },
+      "boost_type": {
+        "name": "Boost type"
+      },
+      "charging_mode": {
+        "name": "Charging Mode"
+      },
+      "phase_switch": {
+        "name": "Phase Switch"
+      },
+      "daylight_saving": {
+        "name": "Daylight Saving"
+      },
+      "cable_unlock_select": {
+        "name": "Cable unlock"
+      }
+    },
+    "button": {
+      "start_charging": {
+        "name": "Start Charging"
+      },
+      "stop_charging": {
+        "name": "Stop Charging"
+      },
+      "start_charging_force": {
+        "name": "Start Charging Force"
+      },
+      "restart": {
+        "name": "Restart"
+      },
+      "authenticate": {
+        "name": "Authenticate"
+      }
+    },
+    "update": {
+      "firmware_update": {
+        "name": "Firmware Update"
+      }
+    }
+  },
   "exceptions": {
     "charger_unavailable": {
       "message": "Charger {name} ({serial}) is unavailable. Check connection and power."
     },
-    "charger_not_found": {
-      "message": "Charger with device ID {device_id} was not found."
+    "update_failed": {
+      "message": "Failed to update charger data: {error}"
     },
-    "connection_failed": {
-      "message": "Failed to connect to charger {name}. Check network settings."
-    },
-    "invalid_property": {
-      "message": "Property {property} is not valid for charger {name}."
+    "entry_cannot_connect": {
+      "message": "Cannot connect to charger {name} ({serial}): {error}"
     }
   }
 }

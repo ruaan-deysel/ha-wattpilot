@@ -38,25 +38,6 @@ set_goe_cloud:
       selector:
         boolean:
 
-set_debug_properties:
-  name: Set debug properties
-  description: Enable or disable logging of charger property changes as warning within logs
-  fields:
-    device_id:
-      name: Charger
-      description: Charger device for which to apply change
-      example: 1625eec2e3f83829c2d52999ecdd2036
-      selector:
-        device:
-          integration: wattpilot
-    debug_properties:
-      name: Debug
-      description: TRUE to debug all properties; FALSE to debug none; list of properties to debug only these
-      example:
-        - wda
-        - cci
-        - err
-
 disconnect_charger:
   name: Disconnect Charger
   description: Disconnect an established charger connection (entities will be unavailable)

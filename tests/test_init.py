@@ -43,14 +43,12 @@ class TestIntegrationSetup:
             coordinator=coordinator,
             push_entities={},
             params={"test": "value"},
-            debug_properties=False,
         )
 
         assert runtime_data.charger == charger
         assert runtime_data.coordinator == coordinator
         assert runtime_data.push_entities == {}
         assert runtime_data.params == {"test": "value"}
-        assert runtime_data.debug_properties is False
 
 
 class TestConstants:
@@ -229,16 +227,12 @@ class TestEntityDescriptions:
 class TestAsyncSetup:
     """Test async_setup function."""
 
-    async def test_async_setup_registers_services(self, hass: HomeAssistant) -> None:
-        """Test that async_setup registers services."""
+    async def test_async_setup_returns_true(self, hass: HomeAssistant) -> None:
+        """Test that async_setup returns True."""
         from custom_components.wattpilot import async_setup
 
-        with patch(
-            "custom_components.wattpilot._ensure_services_registered"
-        ) as mock_register:
-            result = await async_setup(hass, {})
-            assert result is True
-            mock_register.assert_called_once_with(hass)
+        result = await async_setup(hass, {})
+        assert result is True
 
 
 class TestAsyncSetupEntry:
@@ -383,7 +377,6 @@ class TestAsyncUnloadEntry:
             coordinator=coordinator,
             push_entities={},
             params=mock_config_entry_data,
-            debug_properties=False,
             options_update_listener=MagicMock(),
         )
         entry.runtime_data = runtime_data
@@ -425,7 +418,6 @@ class TestAsyncUnloadEntry:
             coordinator=coordinator,
             push_entities={},
             params=mock_config_entry_data,
-            debug_properties=False,
         )
         entry.runtime_data = runtime_data
 
@@ -470,7 +462,6 @@ class TestOptionsUpdateListener:
             coordinator=coordinator,
             push_entities={},
             params=mock_config_entry_data,
-            debug_properties=False,
         )
         entry.runtime_data = runtime_data
 

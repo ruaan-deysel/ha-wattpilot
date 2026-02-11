@@ -4,7 +4,8 @@
       "already_configured": "Diese Ladestation ist bereits konfiguriert.",
       "single_instance_allowed": "Nur eine Instanz dieser Konfiguration ist erlaubt.",
       "exception": "Ein unbekannter Fehler ist aufgetreten - bitte Logdateien prüfen.",
-      "not_supported": "Dieser Workflow wird noch nicht unterstützt. Bitte auf ein Update warten."
+      "not_supported": "Dieser Workflow wird noch nicht unterstützt. Bitte auf ein Update warten.",
+      "invalid_connection": "Ungültiger Verbindungstyp ausgewählt."
     },
     "error": {
       "cannot_connect": "Verbindung zur Ladestation fehlgeschlagen. Bitte IP-Adresse und Passwort prüfen.",
@@ -76,7 +77,17 @@
         "title": "Wattpilot Optionen",
         "description": "Konfigurieren Sie die Optionen Ihrer Wattpilot Ladestation."
       },
-      "local": {
+      "config_connection": {
+        "title": "Verbindungstyp",
+        "description": "Wählen Sie die Verbindungsart zu Ihrer Ladestation.",
+        "data": {
+          "connection": "Verbindungstyp"
+        },
+        "data_description": {
+          "connection": "Lokale Verbindung nutzt die IP-Adresse der Ladestation. Cloud-Verbindung nutzt die Seriennummer."
+        }
+      },
+      "config_local": {
         "title": "Lokale Verbindungsoptionen",
         "description": "Aktualisieren Sie die Verbindungseinstellungen für Ihre lokal verbundene Wattpilot Ladestation.",
         "data": {
@@ -92,7 +103,7 @@
           "timeout": "Timeout in Sekunden für Verbindung und Initialisierung (Standard: 30)."
         }
       },
-      "cloud": {
+      "config_cloud": {
         "title": "Cloud-Verbindungsoptionen",
         "description": "Aktualisieren Sie die Cloud-Verbindungseinstellungen für Ihre Wattpilot Ladestation.",
         "data": {
@@ -139,20 +150,6 @@
         }
       }
     },
-    "set_debug_properties": {
-      "name": "Debug-Eigenschaften setzen",
-      "description": "Aktiviert oder deaktiviert die Protokollierung von Ladestations-Eigenschaftsänderungen als Warnungen.",
-      "fields": {
-        "device_id": {
-          "name": "Ladestation",
-          "description": "Die zu konfigurierende Ladestation."
-        },
-        "debug_properties": {
-          "name": "Debug-Eigenschaften",
-          "description": "True für alle Eigenschaften, false für keine, oder eine Liste spezifischer Eigenschaften."
-        }
-      }
-    },
     "disconnect_charger": {
       "name": "Ladestation trennen",
       "description": "Trennt eine bestehende Ladestationsverbindung. Entitäten werden nicht verfügbar.",
@@ -174,18 +171,221 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "access_state": {
+        "name": "Zugriffsstatus"
+      },
+      "car_connected": {
+        "name": "Auto verbunden"
+      },
+      "id_chip": {
+        "name": "ID-Chip"
+      },
+      "car_state": {
+        "name": "Auto-Status"
+      },
+      "inverter": {
+        "name": "Wechselrichter"
+      },
+      "wifi_connection": {
+        "name": "WLAN-Verbindung"
+      },
+      "cable_unlock": {
+        "name": "Kabelentriegelung"
+      },
+      "internal_error": {
+        "name": "Interner Fehler"
+      },
+      "total_energy": {
+        "name": "Gesamt geladen"
+      },
+      "lock_feedback": {
+        "name": "Verriegelungsrückmeldung"
+      },
+      "effective_lock_setting": {
+        "name": "Effektive Verriegelungseinstellung"
+      },
+      "local_time": {
+        "name": "Lokale Zeit"
+      },
+      "charging_reason": {
+        "name": "Ladegrund"
+      },
+      "charging_power": {
+        "name": "Ladeleistung"
+      },
+      "webserver_queue": {
+        "name": "Webserver-Warteschlange"
+      },
+      "reboot_counter": {
+        "name": "Neustart-Zähler"
+      },
+      "reboot_timer": {
+        "name": "Neustart-Timer"
+      },
+      "wifi_signal": {
+        "name": "WLAN-Signal"
+      },
+      "charger_temp": {
+        "name": "Ladestation-Temperatur"
+      },
+      "id_chip_current": {
+        "name": "Aktueller ID-Chip"
+      },
+      "http_clients": {
+        "name": "HTTP-Clients"
+      },
+      "websocket_clients": {
+        "name": "WebSocket-Clients"
+      },
+      "session_energy": {
+        "name": "Verbindung geladen"
+      },
+      "wifi_state": {
+        "name": "WLAN-Status"
+      }
+    },
+    "switch": {
+      "lock_level_selection": {
+        "name": "Tastensperre"
+      },
+      "boost": {
+        "name": "Boost"
+      },
+      "charge_pause": {
+        "name": "Ladepause"
+      },
+      "remain_in_eco_mode": {
+        "name": "Im Eco-Modus bleiben"
+      },
+      "lumina_strom_awattar": {
+        "name": "Lumina Strom aWattar"
+      },
+      "pv_surplus": {
+        "name": "PV-Überschuss"
+      },
+      "load_balancing": {
+        "name": "Lastmanagement"
+      },
+      "led_energy_saving": {
+        "name": "LED-Energiesparen"
+      },
+      "ground_check": {
+        "name": "Erdungsprüfung"
+      },
+      "discharge_pv_battery": {
+        "name": "PV-Batterie entladen"
+      },
+      "simulate_unplugging": {
+        "name": "Abstecken simulieren"
+      },
+      "network_time_protocol": {
+        "name": "Netzwerkzeitprotokoll"
+      },
+      "unlock_power_outage": {
+        "name": "Entriegeln bei Stromausfall"
+      },
+      "auto_disable_hotspot": {
+        "name": "Hotspot automatisch deaktivieren"
+      }
+    },
+    "number": {
+      "max_charging_current": {
+        "name": "Max. Ladestrom"
+      },
+      "max_price": {
+        "name": "Max. Preis"
+      },
+      "boost_discharges_until": {
+        "name": "Boost entlädt bis"
+      },
+      "pv_battery_threshold": {
+        "name": "PV-Batterieschwelle"
+      },
+      "min_charging_time": {
+        "name": "Min. Ladezeit"
+      },
+      "ohmpilot_threshold": {
+        "name": "Ohmpilot-Schwelle"
+      },
+      "start_charging_at": {
+        "name": "Laden starten bei"
+      },
+      "next_trip_charging": {
+        "name": "Nächste Fahrt Laden"
+      },
+      "phase_switch_delay": {
+        "name": "Phasenumschaltung Verzögerung"
+      },
+      "phase_switch_interval": {
+        "name": "Phasenumschaltung Intervall"
+      },
+      "pv_battery_discharges_until": {
+        "name": "PV-Batterie entlädt bis"
+      },
+      "three_phase_power_level": {
+        "name": "3-Phasen-Leistungsstufe"
+      }
+    },
+    "select": {
+      "access_control": {
+        "name": "Zugangskontrolle"
+      },
+      "awattar_country": {
+        "name": "aWattar Land"
+      },
+      "lock_level_selection": {
+        "name": "Tastensperre"
+      },
+      "boost_type": {
+        "name": "Boost-Typ"
+      },
+      "charging_mode": {
+        "name": "Lademodus"
+      },
+      "phase_switch": {
+        "name": "Phasenumschaltung"
+      },
+      "daylight_saving": {
+        "name": "Sommerzeit"
+      },
+      "cable_unlock_select": {
+        "name": "Kabelverriegelung"
+      }
+    },
+    "button": {
+      "start_charging": {
+        "name": "Laden starten"
+      },
+      "stop_charging": {
+        "name": "Laden stoppen"
+      },
+      "start_charging_force": {
+        "name": "Laden erzwingen"
+      },
+      "restart": {
+        "name": "Neustart"
+      },
+      "authenticate": {
+        "name": "Authentifizieren"
+      }
+    },
+    "update": {
+      "firmware_update": {
+        "name": "Firmware-Update"
+      }
+    }
+  },
   "exceptions": {
     "charger_unavailable": {
       "message": "Ladestation {name} ({serial}) ist nicht verfügbar. Überprüfen Sie die Verbindung und Stromversorgung."
     },
-    "charger_not_found": {
-      "message": "Ladestation mit Geräte-ID {device_id} wurde nicht gefunden."
+    "update_failed": {
+      "message": "Fehler beim Aktualisieren der Ladestationsdaten: {error}"
     },
-    "connection_failed": {
-      "message": "Verbindung zur Ladestation {name} fehlgeschlagen. Überprüfen Sie die Netzwerkeinstellungen."
-    },
-    "invalid_property": {
-      "message": "Eigenschaft {property} ist für Ladestation {name} nicht gültig."
+    "entry_cannot_connect": {
+      "message": "Verbindung zur Ladestation {name} ({serial}) nicht möglich: {error}"
     }
   }
 }

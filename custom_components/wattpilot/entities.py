@@ -6,20 +6,14 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
-from homeassistant.const import (
-    CONF_FRIENDLY_NAME,
-    CONF_IP_ADDRESS,
-    STATE_UNKNOWN,
-)
+from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from packaging.version import Version
 
 from .const import (
     CONF_CONNECTION,
-    DEFAULT_NAME,
     DOMAIN,
 )
 from .descriptions import (
@@ -38,7 +32,7 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = logging.getLogger(__name__)
 
-PARALLEL_UPDATES = 0
+PARALLEL_UPDATES = 1
 
 
 def check_firmware_supported(
@@ -96,7 +90,7 @@ def check_variant_supported(
     """Return whether the current charger variant matches the filter."""
     if variant_filter is None:
         return True
-    variant = GetChargerProp(charger, "var", 11)
+    variant = getattr(charger, "variant", GetChargerProp(charger, "var", 11))
     result = str(variant).upper() == str(variant_filter).upper()
     _LOGGER.debug(
         "%s - %s: check_variant_supported (%s=%s -> %s)",
@@ -175,7 +169,7 @@ def filter_descriptions[T: WattpilotDescriptionMixin](
     return result
 
 
-class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"], Entity):
+class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
     """Base class for Fronius Wattpilot integration."""
 
     _attr_has_entity_name = True
@@ -193,11 +187,7 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"], Entity):
         super().__init__(coordinator)
 
         try:
-            self._charger_id = str(
-                entry.data.get(
-                    CONF_FRIENDLY_NAME, entry.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
-                )
-            )
+            self._charger_id = str(getattr(charger, "serial", entry.entry_id))
             self._identifier = description.charger_key
             _LOGGER.debug("%s - %s: __init__", self._charger_id, self._identifier)
 
@@ -212,9 +202,6 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"], Entity):
             self.hass = hass
 
             self._init_failed = True
-            self._fw_supported = True
-            self._variant_supported = True
-            self._connection_supported = True
 
             # Validate the charger actually has the property/attribute
             if self._source == SOURCE_ATTRIBUTE and not hasattr(
@@ -254,12 +241,6 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"], Entity):
                     return
 
             self._init_failed = False
-
-            # Entity name: use description name or derive from key
-            self._attr_name = (
-                description.name or description.key.replace("_", " ").title()
-            )
-            self._attr_icon = description.icon
 
             self._attributes: dict[str, Any] = {}
             self._attributes["description"] = description.description_text
@@ -325,7 +306,7 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"], Entity):
                 self._identifier,
             )
             return False
-        if not getattr(self._charger, "allPropsInitialized", True):
+        if not getattr(self._charger, "properties_initialized", True):
             _LOGGER.debug(
                 "%s - %s: available: false because not all properties initialized",
                 self._charger_id,
@@ -380,30 +361,20 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"], Entity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return a device description for device registry."""
+        serial = getattr(self._charger, "serial", None)
+        model = getattr(self._charger, "model", None)
+        variant = getattr(self._charger, "variant", None)
         return DeviceInfo(
-            identifiers={
-                (
-                    DOMAIN,
-                    getattr(
-                        self._charger,
-                        "serial",
-                        GetChargerProp(self._charger, "sse", None),
-                    ),
-                )
-            },
-            manufacturer=getattr(self._charger, "manufacturer", STATE_UNKNOWN),
-            model=GetChargerProp(
-                self._charger,
-                "typ",
-                getattr(self._charger, "devicetype", STATE_UNKNOWN),
-            ),
+            identifiers={(DOMAIN, serial)},
+            manufacturer=getattr(self._charger, "manufacturer", None),
+            model=model,
             name=getattr(
                 self._charger,
                 "name",
-                getattr(self._charger, "hostname", STATE_UNKNOWN),
+                getattr(self._charger, "hostname", None),
             ),
-            sw_version=getattr(self._charger, "firmware", STATE_UNKNOWN),
-            hw_version=str(GetChargerProp(self._charger, "var", STATE_UNKNOWN)) + " KW",
+            sw_version=getattr(self._charger, "firmware", None),
+            hw_version=f"{variant} KW" if variant else None,
         )
 
     async def async_update(self) -> None:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import functools
 import logging
 import re
@@ -15,13 +14,11 @@ from homeassistant.components.update import (
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
-    CONF_TIMEOUT,
 )
 from packaging.version import Version
 
 from .const import (
     DEFAULT_NAME,
-    DEFAULT_TIMEOUT,
 )
 from .descriptions import (
     SOURCE_PROPERTY,
@@ -31,7 +28,6 @@ from .descriptions import (
 from .entities import ChargerPlatformEntity, filter_descriptions
 from .utils import (
     GetChargerProp,
-    async_SetChargerProp,
 )
 
 if TYPE_CHECKING:
@@ -97,7 +93,6 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
         )
         self._identifier_installed = desc.id_installed
         self._identifier_trigger = desc.id_trigger
-        self._identifier_status = desc.id_status
 
         self._attr_installed_version = GetChargerProp(
             self._charger, self._identifier_installed, None
@@ -199,58 +194,19 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
                     self._available_versions,
                 )
                 return
+
             _LOGGER.debug(
-                "%s - %s: async_install: trigger charger update via: %s -> %s",
+                "%s - %s: async_install: installing firmware version: %s",
                 self._charger_id,
                 self._identifier,
-                self._identifier_trigger,
                 v_name,
             )
-            await async_SetChargerProp(
-                self._charger,
-                self._identifier_trigger,
-                v_name,
-                force=True,
-                force_type=self._set_type,
-            )
-
-            # Get timeout from config
-            timeout = DEFAULT_TIMEOUT
-            runtime_data = getattr(self._entry, "runtime_data", None)
-            if runtime_data is not None:
-                config_params = runtime_data.params or {}
-                timeout = config_params.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
-            timeout = timeout * 4
-
-            timer = 0
-            while timeout > timer and self._charger.connected:
-                await asyncio.sleep(1)
-                timer += 1
-            if self._charger.connected:
-                _LOGGER.error(
-                    "%s - %s: async_install: timeout during update install: %s sec",
-                    self._charger_id,
-                    self._identifier,
-                    timeout,
-                )
-                return
-            _LOGGER.debug(
-                "%s - %s: async_install: charger disconnected - waiting for reconnect",
+            await self._charger.install_firmware_update(v_name)
+            _LOGGER.info(
+                "%s - %s: async_install: firmware update complete",
                 self._charger_id,
                 self._identifier,
             )
-            timer = 0
-            while timeout > timer and not self._charger.connected:
-                await asyncio.sleep(1)
-                timer += 1
-            if not self._charger.connected:
-                _LOGGER.error(
-                    "%s - %s: async_install: timeout during charger restart: %s sec",
-                    self._charger_id,
-                    self._identifier,
-                    timeout,
-                )
-                return
         except Exception:
             _LOGGER.exception(
                 "%s - %s: async_install failed", self._charger_id, self._identifier

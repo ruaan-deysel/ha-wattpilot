@@ -20,9 +20,6 @@ from .const import (
     CONF_SERIAL,
 )
 from .types import WattpilotConfigEntry
-from .utils import (
-    wattpilot,
-)
 
 REDACT_CONFIG = {CONF_IP_ADDRESS, CONF_PASSWORD, CONF_SERIAL}
 REDACT_ALLPROPS = {"wifis", "scan", "data", "dll", "cak", "ocppck", "ocppcc", "ocppsc"}
@@ -62,9 +59,9 @@ async def async_get_config_entry_diagnostics(
             entry.entry_id,
         )
         charger = entry.runtime_data.charger
-        if charger and hasattr(charger, "allProps"):
+        if charger and hasattr(charger, "all_properties"):
             diag["charger_properties"] = async_redact_data(
-                charger.allProps, REDACT_ALLPROPS
+                charger.all_properties, REDACT_ALLPROPS
             )
         else:
             diag["charger_properties"] = "Charger not available or not initialized"
@@ -83,7 +80,9 @@ async def async_get_config_entry_diagnostics(
         if charger:
             diag["charger_info"] = {
                 "connected": getattr(charger, "connected", None),
-                "allPropsInitialized": getattr(charger, "allPropsInitialized", None),
+                "properties_initialized": getattr(
+                    charger, "properties_initialized", None
+                ),
                 "name": getattr(charger, "name", None),
                 "serial": async_redact_data(
                     {"serial": getattr(charger, "serial", None)}, {"serial"}
@@ -106,11 +105,9 @@ async def async_get_config_entry_diagnostics(
             entry.entry_id,
         )
         diag["modules"] = {
-            "wattpilot_version": version("wattpilot"),
-            "wattpilot_file": wattpilot.__file__,
+            "wattpilot_api_version": version("wattpilot-api"),
             "pyyaml": version("pyyaml"),
             "importlib_metadata": version("importlib_metadata"),
-            "aiofiles": version("aiofiles"),
             "packaging": version("packaging"),
         }
     except Exception as e:

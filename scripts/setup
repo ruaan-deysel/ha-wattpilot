@@ -4,4 +4,14 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-python3 -m pip install --requirement requirements.txt
+# Install uv if not available
+if ! command -v uv &> /dev/null; then
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+# Sync all dependencies (including dev group)
+uv sync --group dev
+
+# Install pre-commit hooks
+uv run pre-commit install

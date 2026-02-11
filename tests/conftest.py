@@ -19,20 +19,13 @@ CONF_IP_ADDRESS = "ip_address"
 CONF_PASSWORD = "password"  # noqa: S105
 
 
-def _create_mock_wattpilot_module() -> MagicMock:
-    """Create a mock wattpilot module to avoid websocket dependency."""
+def _create_mock_wattpilot_api_module() -> MagicMock:
+    """Create a mock wattpilot_api module to avoid websocket dependency."""
     mock_module = MagicMock()
 
     # Mock Wattpilot class
     mock_wattpilot_class = MagicMock()
     mock_module.Wattpilot = mock_wattpilot_class
-
-    # Mock Event enum
-    mock_event = MagicMock()
-    mock_event.WP_PROPERTY = "property"
-    mock_event.WP_CONNECT = "connect"
-    mock_event.WP_DISCONNECT = "disconnect"
-    mock_module.Event = mock_event
 
     # Mock LoadMode enum
     mock_load_mode = MagicMock()
@@ -41,29 +34,43 @@ def _create_mock_wattpilot_module() -> MagicMock:
     mock_load_mode.NEXTTRIP = 5
     mock_module.LoadMode = mock_load_mode
 
-    # Mock value mappings
-    mock_module.carValues = {
-        0: "Unknown",
-        1: "Idle",
-        2: "Charging",
-        3: "Wait Car",
-        4: "Complete",
-        5: "Error",
-    }
-    mock_module.lmoValues = {3: "Default", 4: "Eco", 5: "NextTrip"}
-    mock_module.astValues = {0: "open", 1: "locked", 2: "auto"}
-    mock_module.errValues = {0: "None", 1: "FI AC", 2: "FI DC"}
+    # Mock CarStatus enum
+    mock_car_status = MagicMock()
+    mock_car_status.NO_CAR = 1
+    mock_car_status.CHARGING = 2
+    mock_car_status.READY = 3
+    mock_car_status.COMPLETE = 4
+    mock_module.CarStatus = mock_car_status
+
+    # Mock ErrorState enum
+    mock_error_state = MagicMock()
+    mock_error_state.IDLE = 0
+    mock_error_state.CHARGING = 1
+    mock_error_state.ERROR = 5
+    mock_module.ErrorState = mock_error_state
+
+    # Mock AccessState enum
+    mock_access_state = MagicMock()
+    mock_access_state.OPEN = 0
+    mock_access_state.WAIT = 1
+    mock_module.AccessState = mock_access_state
+
+    # Mock CableLockMode enum
+    mock_cable_lock = MagicMock()
+    mock_cable_lock.NORMAL = 0
+    mock_cable_lock.AUTO_UNLOCK = 1
+    mock_cable_lock.ALWAYS_LOCK = 2
+    mock_module.CableLockMode = mock_cable_lock
 
     # Set version
-    mock_module.__version__ = "0.2.2"
-    mock_module.__file__ = "/mock/wattpilot/__init__.py"
+    mock_module.__version__ = "1.0.0"
 
     return mock_module
 
 
-# Install mock wattpilot module before any imports
-_mock_wattpilot = _create_mock_wattpilot_module()
-sys.modules["wattpilot"] = _mock_wattpilot
+# Install mock wattpilot_api module before any imports
+_mock_wattpilot_api = _create_mock_wattpilot_api_module()
+sys.modules["wattpilot_api"] = _mock_wattpilot_api
 
 # Now we can import from the integration
 from custom_components.wattpilot.const import (
@@ -116,7 +123,7 @@ def mock_coordinator(mock_hass: MagicMock, mock_charger: MagicMock) -> MagicMock
     coordinator = MagicMock()
     coordinator.hass = mock_hass
     coordinator.charger = mock_charger
-    coordinator.data = mock_charger.allProps
+    coordinator.data = mock_charger.all_properties
     coordinator.last_update_success = True
     coordinator.async_config_entry_first_refresh = AsyncMock()
     coordinator.async_set_updated_data = MagicMock()
@@ -149,67 +156,39 @@ def mock_charger() -> MagicMock:
     charger.name = properties.get("fna", "Test Wattpilot")
     charger.firmware = properties.get("onv", "40.7")
     charger.connected = True
-    charger.allPropsInitialized = True
+    charger.properties_initialized = True
     charger.manufacturer = "Fronius"
-    charger.devicetype = properties.get("typ", "go-eCharger HOME+ 11kW")
+    charger.device_type = properties.get("typ", "go-eCharger HOME+ 11kW")
     charger.hostname = f"wattpilot-{charger.serial}"
 
-    # Mock allProps dictionary with properties from fixture
-    charger.allProps = properties
+    # Mock all_properties dictionary with properties from fixture
+    charger.all_properties = properties
 
     # Mock charger attributes
-    charger.AccessState = "open"
-    charger.carConnected = "no car"
+    charger.access_state = "open"
+    charger.car_connected = "no car"
 
     # Mock methods
     charger.set_power = AsyncMock()
+    charger.set_property = AsyncMock()
+    charger.set_mode = AsyncMock()
     charger.connect = AsyncMock()
     charger.disconnect = AsyncMock()
-    charger.register_property_callback = MagicMock()
-    charger.unregister_property_callback = MagicMock()
-    charger.add_event_handler = MagicMock()
-    charger.remove_event_handler = MagicMock()
+
+    # Mock on_property_change - returns an unsubscribe callable
+    _unsub = MagicMock()
+    charger.on_property_change = MagicMock(return_value=_unsub)
+    charger.on_message = MagicMock(return_value=MagicMock())
 
     return charger
 
 
 @pytest.fixture
 def mock_wattpilot_module() -> Generator[MagicMock]:
-    """Mock the wattpilot module."""
-    mock_module = MagicMock()
+    """Mock the wattpilot_api module."""
+    mock_module = _create_mock_wattpilot_api_module()
 
-    # Mock Wattpilot class
-    mock_wattpilot_class = MagicMock()
-    mock_module.Wattpilot = mock_wattpilot_class
-
-    # Mock Event enum
-    mock_event = MagicMock()
-    mock_event.WP_PROPERTY = "property"
-    mock_event.WP_CONNECT = "connect"
-    mock_event.WP_DISCONNECT = "disconnect"
-    mock_module.Event = mock_event
-
-    # Mock LoadMode enum
-    mock_load_mode = MagicMock()
-    mock_load_mode.DEFAULT = 3
-    mock_load_mode.ECO = 4
-    mock_load_mode.NEXTTRIP = 5
-    mock_module.LoadMode = mock_load_mode
-
-    # Mock value mappings
-    mock_module.carValues = {
-        0: "Unknown",
-        1: "Idle",
-        2: "Charging",
-        3: "Wait Car",
-        4: "Complete",
-        5: "Error",
-    }
-    mock_module.lmoValues = {3: "Default", 4: "Eco", 5: "NextTrip"}
-    mock_module.astValues = {0: "open", 1: "locked", 2: "auto"}
-    mock_module.errValues = {0: "None", 1: "FI AC", 2: "FI DC"}
-
-    with patch.dict("sys.modules", {"wattpilot": mock_module}):
+    with patch.dict("sys.modules", {"wattpilot_api": mock_module}):
         yield mock_module
 
 
@@ -225,19 +204,19 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 def get_charger_prop(charger: MagicMock, prop: str, default: Any = None) -> Any:
     """Get a property from the mock charger."""
-    return charger.allProps.get(prop, default)
+    return charger.all_properties.get(prop, default)
 
 
 async def async_get_charger_prop(
     charger: MagicMock, prop: str, default: Any = None
 ) -> Any:
     """Async get a property from the mock charger."""
-    return charger.allProps.get(prop, default)
+    return charger.all_properties.get(prop, default)
 
 
 async def async_set_charger_prop(charger: MagicMock, prop: str, value: Any) -> None:
     """Async set a property on the mock charger."""
-    charger.allProps[prop] = value
+    charger.all_properties[prop] = value
 
 
 @pytest.fixture
@@ -254,7 +233,7 @@ def mock_charger_functions(mock_charger: MagicMock) -> Generator[None]:
         ),
         patch(
             "custom_components.wattpilot.utils.async_SetChargerProp",
-            side_effect=lambda c, p, v: async_set_charger_prop(c, p, v),
+            side_effect=async_set_charger_prop,
         ),
     ):
         yield

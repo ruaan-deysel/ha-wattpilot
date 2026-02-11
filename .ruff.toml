@@ -7,7 +7,6 @@ select = [
     "ALL",
 ]
 exclude = [
-    "custom_components/wattpilot/wattpilot/**",
     "set_values_test.py",
 ]
 
@@ -22,7 +21,7 @@ ignore = [
     "FBT002", # Boolean default positional argument
     "FBT003", # Boolean positional value in function call (legacy pattern)
     "BLE001", # Do not catch blind exception (legacy exception handling)
-    "SLF001", # Private member accessed (workaround for wattpilot library)
+    "SLF001", # Private member accessed
     "PLR0911", # Too many return statements (service pattern)
     "E501", # Line too long (acceptable for log messages and complex calls)
     "TRY300", # Consider moving return outside try block (acceptable pattern)

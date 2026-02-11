@@ -5,12 +5,12 @@ Custom Home Assistant integration for Fronius Wattpilot EV chargers using a reve
 ## Quick Start
 
 ```bash
-scripts/setup      # Install dependencies (first time)
+scripts/setup      # Install uv, sync deps, install pre-commit hooks
 scripts/develop    # Start HA at http://localhost:8123 with debug logging
 scripts/lint       # Format and lint (ruff format + check --fix) - REQUIRED before commits
 ```
 
-Config in `config/`. Debug logging already enabled in `config/configuration.yaml`.
+Dependency management uses `uv` with `pyproject.toml` + `uv.lock`. Config in `config/`. Debug logging already enabled in `config/configuration.yaml`.
 
 ## Architecture Overview
 
@@ -124,7 +124,7 @@ async def async_service_SetNextTrip(hass: HomeAssistant, call: ServiceCall) -> N
 
 ## Releases
 
-1. Update version in `custom_components/wattpilot/manifest.json`
+1. Update version in `custom_components/wattpilot/manifest.json` and `pyproject.toml`
 2. Update `CHANGELOG.md` (required)
 3. Run `scripts/lint`
 4. Create GitHub release with tag `vX.Y.Z`

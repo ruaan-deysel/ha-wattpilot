@@ -22,14 +22,14 @@ class TestDiagnostics:
 
     @pytest.fixture
     def mock_charger(self) -> MagicMock:
-        """Create a mock charger with allProps."""
+        """Create a mock charger with all_properties."""
         charger = MagicMock()
         charger.serial = "12345678"
         charger.name = "Test Wattpilot"
         charger.firmware = "40.7"
         charger.connected = True
-        charger.allPropsInitialized = True
-        charger.allProps = get_charger_properties()
+        charger.properties_initialized = True
+        charger.all_properties = get_charger_properties()
         return charger
 
     @pytest.fixture

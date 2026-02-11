@@ -77,11 +77,12 @@ class ChargerSelect(ChargerPlatformEntity, SelectEntity):
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
         desc = self.entity_description
-        opt_identifier = desc.select_options
-        if isinstance(opt_identifier, dict):
-            self._opt_dict = opt_identifier
-        elif opt_identifier is not None:
-            self._opt_dict = getattr(self._charger, opt_identifier, STATE_UNKNOWN)
+        if isinstance(desc.select_options, dict):
+            self._opt_dict = desc.select_options
+        elif desc.options_attribute is not None:
+            self._opt_dict = getattr(
+                self._charger, desc.options_attribute, STATE_UNKNOWN
+            )
         else:
             self._opt_dict = STATE_UNKNOWN
         if isinstance(self._opt_dict, dict):
@@ -147,9 +148,7 @@ class ChargerSelect(ChargerPlatformEntity, SelectEntity):
                 self._identifier,
                 key,
             )
-            await async_SetChargerProp(
-                self._charger, self._identifier, key, force_type=self._set_type
-            )
+            await async_SetChargerProp(self._charger, self._identifier, key)
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: async_select_option failed: %s (%s.%s)",

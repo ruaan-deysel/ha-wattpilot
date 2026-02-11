@@ -41,8 +41,8 @@ class TestWattpilotCoordinator:
         charger.name = "Test Wattpilot"
         charger.firmware = "40.7"
         charger.connected = True
-        charger.allPropsInitialized = True
-        charger.allProps = get_charger_properties()
+        charger.properties_initialized = True
+        charger.all_properties = get_charger_properties()
         return charger
 
     @pytest.fixture
@@ -59,7 +59,7 @@ class TestWattpilotCoordinator:
             coord = WattpilotCoordinator(mock_hass, mock_charger, mock_entry)
             # Manually set attributes that would be set by parent __init__
             coord.hass = mock_hass
-            coord.data = mock_charger.allProps
+            coord.data = mock_charger.all_properties
             coord.last_update_success = True
             coord.async_set_updated_data = MagicMock()
             coord._listeners = {}  # Required for async_update_listeners
@@ -89,7 +89,7 @@ class TestWattpilotCoordinator:
     ) -> None:
         """Test availability when charger is connected and initialized."""
         mock_charger.connected = True
-        mock_charger.allPropsInitialized = True
+        mock_charger.properties_initialized = True
         assert coordinator.available is True
 
     def test_unavailable_when_disconnected(
@@ -104,7 +104,7 @@ class TestWattpilotCoordinator:
     ) -> None:
         """Test unavailability when properties not initialized."""
         mock_charger.connected = True
-        mock_charger.allPropsInitialized = False
+        mock_charger.properties_initialized = False
         assert coordinator.available is False
 
     def test_handle_property_update(
@@ -112,7 +112,7 @@ class TestWattpilotCoordinator:
     ) -> None:
         """Test handling property updates."""
         # Store original data reference
-        coordinator.data = dict(mock_charger.allProps)
+        coordinator.data = dict(mock_charger.all_properties)
 
         coordinator.async_handle_property_update("amp", 10)
 
@@ -127,7 +127,7 @@ class TestWattpilotCoordinator:
     ) -> None:
         """Test handling property updates with a new key."""
         # Store original data reference
-        coordinator.data = dict(mock_charger.allProps)
+        coordinator.data = dict(mock_charger.all_properties)
 
         coordinator.async_handle_property_update("new_prop", "new_value")
 
@@ -147,16 +147,16 @@ class TestCoordinatorDataFlow:
 
     @pytest.fixture
     def mock_charger(self) -> MagicMock:
-        """Create a mock charger with allProps."""
+        """Create a mock charger with all_properties."""
         charger = MagicMock()
         charger.connected = True
-        charger.allPropsInitialized = True
-        charger.allProps = get_charger_properties()
+        charger.properties_initialized = True
+        charger.all_properties = get_charger_properties()
         return charger
 
     def test_data_contains_charger_properties(self, mock_charger: MagicMock) -> None:
         """Test that coordinator data contains charger properties."""
-        properties = mock_charger.allProps
+        properties = mock_charger.all_properties
         assert "amp" in properties
         assert "eto" in properties
         assert "car" in properties
@@ -164,13 +164,13 @@ class TestCoordinatorDataFlow:
 
     def test_energy_values_in_data(self, mock_charger: MagicMock) -> None:
         """Test that energy values are present in data."""
-        properties = mock_charger.allProps
+        properties = mock_charger.all_properties
         assert properties["eto"] == 12345000  # Total energy in Wh
         assert properties["wh"] == 1000  # Session energy in Wh
 
     def test_current_settings_in_data(self, mock_charger: MagicMock) -> None:
         """Test that current settings are present in data."""
-        properties = mock_charger.allProps
+        properties = mock_charger.all_properties
         assert properties["amp"] == 6  # Requested current
         assert properties["ama"] == 16  # Max current limit
 
@@ -199,8 +199,8 @@ class TestCoordinatorAsync:
         charger.serial = "12345678"
         charger.name = "Test Wattpilot"
         charger.connected = True
-        charger.allPropsInitialized = True
-        charger.allProps = get_charger_properties()
+        charger.properties_initialized = True
+        charger.all_properties = get_charger_properties()
         return charger
 
     @pytest.mark.asyncio
@@ -217,7 +217,7 @@ class TestCoordinatorAsync:
             coord = WattpilotCoordinator(mock_hass, mock_charger, mock_entry)
 
             data = await coord._async_update_data()
-            assert data == mock_charger.allProps
+            assert data == mock_charger.all_properties
 
     @pytest.mark.asyncio
     async def test_async_refresh_raises_on_disconnect(

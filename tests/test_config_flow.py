@@ -26,8 +26,8 @@ def mock_charger() -> MagicMock:
     charger.name = "Test Wattpilot"
     charger.firmware = "40.7"
     charger.connected = True
-    charger.allPropsInitialized = True
-    charger.allProps = {"onv": "40.7"}
+    charger.properties_initialized = True
+    charger.all_properties = {"onv": "40.7"}
     return charger
 
 

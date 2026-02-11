@@ -35,14 +35,3 @@ def get_charger_properties() -> dict[str, Any]:
     """
     data = load_fixture("charger_properties.json")
     return {k: v["value"] for k, v in data["properties"].items()}
-
-
-def get_expected_entity_states() -> dict[str, Any]:
-    """
-    Get expected entity states from fixture.
-
-    Returns:
-        Dictionary with expected entity states by platform
-
-    """
-    return load_fixture("expected_entity_states.json")

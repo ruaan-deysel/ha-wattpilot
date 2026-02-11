@@ -6,8 +6,11 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
+from wattpilot_api import Wattpilot
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from .coordinator import WattpilotCoordinator
     from .entities import ChargerPlatformEntity
 
@@ -16,13 +19,12 @@ if TYPE_CHECKING:
 class WattpilotRuntimeData:
     """Runtime data for the Wattpilot integration."""
 
-    charger: Any  # Wattpilot client instance
+    charger: Wattpilot  # Wattpilot client instance
     coordinator: WattpilotCoordinator  # DataUpdateCoordinator for the charger
     push_entities: dict[str, ChargerPlatformEntity] = field(default_factory=dict)
     params: dict[str, Any] = field(default_factory=dict)
-    debug_properties: bool = False
-    options_update_listener: Any | None = None
-    property_updates_callback: Any | None = None
+    options_update_listener: Callable[[], None] | None = None
+    property_updates_callback: Callable[[], None] | None = None
 
 
 type WattpilotConfigEntry = ConfigEntry[WattpilotRuntimeData]

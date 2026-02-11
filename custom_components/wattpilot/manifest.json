@@ -6,9 +6,9 @@
   "config_flow": true,
   "documentation": "https://github.com/ruaan-deysel/ha-wattpilot",
   "issue_tracker": "https://github.com/ruaan-deysel/ha-wattpilot/issues",
-  "requirements": ["wattpilot>=0.2", "packaging>=24.0"],
+  "requirements": ["wattpilot-api>=1.1.0", "packaging>=24.0"],
   "dependencies": [],
   "codeowners": ["@ruaan-deysel"],
   "iot_class": "local_push",
-  "loggers": ["wattpilot"]
+  "loggers": ["wattpilot_api"]
 }

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Final
 
@@ -82,7 +81,6 @@ async def async_get_OPTIONS_LOCAL_SCHEMA(current_data):
                 ): cv.positive_int,
             }
         )
-        await asyncio.sleep(0)
         return OPTIONS_LOCAL_SCHEMA
     except Exception as e:
         _LOGGER.error(
@@ -117,7 +115,6 @@ async def async_get_OPTIONS_CLOUD_SCHEMA(current_data):
                 ): cv.positive_int,
             }
         )
-        await asyncio.sleep(0)
         return OPTIONS_CLOUD_SCHEMA
     except Exception as e:
         _LOGGER.error(

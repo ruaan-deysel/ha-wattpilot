@@ -18,26 +18,21 @@ from .services import (
     async_registerService,
     async_service_DisconnectCharger,
     async_service_ReConnectCharger,
-    async_service_SetDebugProperties,
     async_service_SetGoECloud,
     async_service_SetNextTrip,
 )
 from .types import WattpilotConfigEntry, WattpilotRuntimeData
 from .utils import (
-    PropertyUpdateHandler,
     async_ConnectCharger,
     async_DisconnectCharger,
-    wattpilot,
+    async_property_update_handler,
 )
 
 _LOGGER: Final = logging.getLogger(__name__)
 
-_SERVICES_REGISTERED: bool = False
-
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up via YAML (kept for service registration)."""
-    await _ensure_services_registered(hass)
     return True
 
 
@@ -45,6 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
     """Set up a charger from the config entry."""
     _LOGGER.debug("Setting up config entry: %s", entry.entry_id)
 
+    hass.data.setdefault(DOMAIN, {})
     await _ensure_services_registered(hass)
 
     try:
@@ -108,7 +104,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
             coordinator=coordinator,
             push_entities={},
             params=dict(entry.data),
-            debug_properties=False,
         )
     except Exception as e:
         _LOGGER.error(
@@ -167,31 +162,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
             "%s - async_setup_entry: register properties update handler",
             entry.entry_id,
         )
-        if hasattr(charger, "register_property_callback") and callable(
-            charger.register_property_callback
-        ):
-            charger.register_property_callback(
-                lambda identifier, value: PropertyUpdateHandler(
-                    hass, entry, identifier, value
-                )
-            )
-        elif hasattr(charger, "add_event_handler") and callable(
-            charger.add_event_handler
-        ):
-            entry.runtime_data.property_updates_callback = (
-                lambda _, identifier, value: PropertyUpdateHandler(
-                    hass, entry, identifier, value
-                )
-            )
-            charger.add_event_handler(
-                wattpilot.Event.WP_PROPERTY,
-                entry.runtime_data.property_updates_callback,
-            )
-        else:
-            _LOGGER.warning(
-                "%s - async_setup_entry: charger does not provide properties updater handler",
-                entry.entry_id,
-            )
+
+        async def _on_property_change(identifier: str, value: str) -> None:
+            await async_property_update_handler(hass, entry, identifier, value)
+
+        unsub = charger.on_property_change(_on_property_change)
+        entry.runtime_data.property_updates_callback = unsub
     except Exception as e:
         _LOGGER.error(
             "%s - async_setup_entry: Could not register properties updater handler: %s (%s.%s)",
@@ -211,8 +187,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
 
 async def _ensure_services_registered(hass: HomeAssistant) -> None:
     """Register integration-wide services once."""
-    global _SERVICES_REGISTERED
-    if _SERVICES_REGISTERED:
+    if hass.data.get(DOMAIN, {}).get("services_registered"):
         return
     try:
         _LOGGER.debug("%s - register services", DOMAIN)
@@ -223,11 +198,8 @@ async def _ensure_services_registered(hass: HomeAssistant) -> None:
             hass, "reconnect_charger", async_service_ReConnectCharger
         )
         await async_registerService(hass, "set_goe_cloud", async_service_SetGoECloud)
-        await async_registerService(
-            hass, "set_debug_properties", async_service_SetDebugProperties
-        )
         await async_registerService(hass, "set_next_trip", async_service_SetNextTrip)
-        _SERVICES_REGISTERED = True
+        hass.data.setdefault(DOMAIN, {})["services_registered"] = True
     except Exception as e:
         _LOGGER.error(
             "%s - register services failed: %s (%s.%s)",
@@ -295,17 +267,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) -
                     "%s - async_unload_entry: remove registered event handlers",
                     entry.entry_id,
                 )
-                if hasattr(charger, "unregister_property_callback") and callable(
-                    charger.unregister_property_callback
-                ):
-                    charger.unregister_property_callback()
-                elif hasattr(charger, "remove_event_handler") and callable(
-                    charger.remove_event_handler
-                ):
-                    charger.remove_event_handler(
-                        wattpilot.Event.WP_PROPERTY,
-                        entry.runtime_data.property_updates_callback,
-                    )
+                unsub = entry.runtime_data.property_updates_callback
+                if unsub is not None and callable(unsub):
+                    unsub()
             except Exception as e:
                 _LOGGER.error(
                     "%s - async_unload_entry: failed to remove event handlers: %s (%s.%s)",
@@ -333,6 +297,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) -
                     charger.serial,
                 )
 
+            # Unregister services if this was the last entry
+            _async_unregister_services(hass)
+
         return unload_ok
 
     except Exception as e:
@@ -344,3 +311,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) -
             type(e).__name__,
         )
         return False
+
+
+def _async_unregister_services(hass: HomeAssistant) -> None:
+    """Unregister integration services when the last entry is unloaded."""
+    remaining = hass.config_entries.async_entries(DOMAIN)
+    if remaining:
+        return
+    _LOGGER.debug("%s - unregistering services (last entry unloaded)", DOMAIN)
+    for service_name in (
+        "disconnect_charger",
+        "reconnect_charger",
+        "set_goe_cloud",
+        "set_next_trip",
+    ):
+        if hass.services.has_service(DOMAIN, service_name):
+            hass.services.async_remove(DOMAIN, service_name)
+    hass.data.pop(DOMAIN, None)
