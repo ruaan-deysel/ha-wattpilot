@@ -3,32 +3,35 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import CONF_FRIENDLY_NAME, CONF_IP_ADDRESS, CONF_PASSWORD
+from homeassistant.core import HomeAssistant
 
-# Test constants
-CONF_FRIENDLY_NAME = "friendly_name"
-CONF_IP_ADDRESS = "ip_address"
-CONF_PASSWORD = "password"  # noqa: S105
-CONF_CONNECTION = "connection"
-CONF_LOCAL = "local"
-CONF_CLOUD = "cloud"
-CONF_SERIAL = "serial"
-DOMAIN = "wattpilot"
+from custom_components.wattpilot.config_flow import (
+    ConfigFlowHandler,
+    OptionsFlowHandler,
+)
+from custom_components.wattpilot.const import (
+    CONF_CLOUD,
+    CONF_CONNECTION,
+    CONF_LOCAL,
+    CONF_SERIAL,
+    DOMAIN,
+)
 
 
 @pytest.fixture
-def mock_charger() -> MagicMock:
-    """Create a mock charger."""
-    charger = MagicMock()
-    charger.serial = "12345678"
-    charger.name = "Test Wattpilot"
-    charger.firmware = "40.7"
-    charger.connected = True
-    charger.properties_initialized = True
-    charger.all_properties = {"onv": "40.7"}
-    return charger
+def mock_hass() -> MagicMock:
+    """Create a mock Home Assistant instance."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_reload = AsyncMock()
+    hass.config_entries.async_update_entry = MagicMock()
+    return hass
 
 
 class TestConfigFlowDataValidation:
@@ -111,8 +114,497 @@ class TestConfigFlowDataValidation:
 
     def test_config_constants(self) -> None:
         """Test configuration constants."""
-        from custom_components.wattpilot.const import CONF_CLOUD, CONF_LOCAL, DOMAIN
-
         assert DOMAIN == "wattpilot"
         assert CONF_LOCAL == "local"
         assert CONF_CLOUD == "cloud"
+
+
+class TestConfigFlowUser:
+    """Test user configuration flow."""
+
+    @pytest.mark.asyncio
+    async def test_async_step_user_initializes_data(self) -> None:
+        """Test user step initializes flow data."""
+        flow = ConfigFlowHandler()
+
+        with patch.object(flow, "async_step_connection", return_value=MagicMock()):
+            await flow.async_step_user()
+            assert hasattr(flow, "data")
+            assert isinstance(flow.data, dict)
+
+    @pytest.mark.asyncio
+    async def test_async_step_user_calls_connection(self) -> None:
+        """Test user step calls connection step."""
+        flow = ConfigFlowHandler()
+
+        with patch.object(
+            flow, "async_step_connection", return_value=MagicMock()
+        ) as mock_conn:
+            await flow.async_step_user()
+            mock_conn.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_user_exception_handling(self) -> None:
+        """Test user step handles exceptions."""
+        flow = ConfigFlowHandler()
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+        with patch.object(flow, "async_step_connection", side_effect=Exception("test")):
+            result = await flow.async_step_user()
+            assert result["type"] == "abort"
+            flow.async_abort.assert_called_once_with(reason="exception")
+
+    @pytest.mark.asyncio
+    async def test_async_step_connection_shows_form(self) -> None:
+        """Test connection step shows form when no input."""
+        flow = ConfigFlowHandler()
+        flow.async_show_form = MagicMock(return_value={"type": "form"})
+
+        result = await flow.async_step_connection()
+        assert result["type"] == "form"
+        flow.async_show_form.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_connection_local_selected(self) -> None:
+        """Test connection step routes to local when selected."""
+        flow = ConfigFlowHandler()
+        user_input = {CONF_CONNECTION: CONF_LOCAL}
+
+        with patch.object(
+            flow, "async_step_local", return_value=MagicMock()
+        ) as mock_local:
+            await flow.async_step_connection(user_input)
+            mock_local.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_connection_cloud_selected(self) -> None:
+        """Test connection step routes to cloud when selected."""
+        flow = ConfigFlowHandler()
+        user_input = {CONF_CONNECTION: CONF_CLOUD}
+
+        with patch.object(
+            flow, "async_step_cloud", return_value=MagicMock()
+        ) as mock_cloud:
+            await flow.async_step_connection(user_input)
+            mock_cloud.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_connection_exception_handling(self) -> None:
+        """Test connection step handles exceptions."""
+        flow = ConfigFlowHandler()
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+        with patch.object(flow, "async_show_form", side_effect=Exception("test")):
+            result = await flow.async_step_connection()
+            assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_local_shows_form(self) -> None:
+        """Test local step shows form when no input."""
+        flow = ConfigFlowHandler()
+        flow.async_show_form = MagicMock(return_value={"type": "form"})
+
+        result = await flow.async_step_local()
+        assert result["type"] == "form"
+
+    @pytest.mark.asyncio
+    async def test_async_step_local_processes_input(self) -> None:
+        """Test local step processes user input."""
+        flow = ConfigFlowHandler()
+        user_input = {
+            CONF_FRIENDLY_NAME: "Test",
+            CONF_IP_ADDRESS: "192.168.1.100",
+            CONF_PASSWORD: "test",
+        }
+
+        with patch.object(
+            flow, "async_step_final", return_value=MagicMock()
+        ) as mock_final:
+            await flow.async_step_local(user_input)
+            assert flow.data[CONF_CONNECTION] == CONF_LOCAL
+            mock_final.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_local_exception_handling(self) -> None:
+        """Test local step handles exceptions."""
+        flow = ConfigFlowHandler()
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+        with patch.object(flow, "async_show_form", side_effect=Exception("test")):
+            result = await flow.async_step_local()
+            assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_cloud_shows_form(self) -> None:
+        """Test cloud step shows form when no input."""
+        flow = ConfigFlowHandler()
+        flow.async_show_form = MagicMock(return_value={"type": "form"})
+
+        result = await flow.async_step_cloud()
+        assert result["type"] == "form"
+
+    @pytest.mark.asyncio
+    async def test_async_step_cloud_processes_input(self) -> None:
+        """Test cloud step processes user input."""
+        flow = ConfigFlowHandler()
+        user_input = {
+            CONF_FRIENDLY_NAME: "Test",
+            CONF_SERIAL: "12345678",
+            CONF_PASSWORD: "test",
+        }
+
+        with patch.object(
+            flow, "async_step_final", return_value=MagicMock()
+        ) as mock_final:
+            await flow.async_step_cloud(user_input)
+            assert flow.data[CONF_CONNECTION] == CONF_CLOUD
+            mock_final.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_cloud_exception_handling(self) -> None:
+        """Test cloud step handles exceptions."""
+        flow = ConfigFlowHandler()
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+        with patch.object(flow, "async_show_form", side_effect=Exception("test")):
+            result = await flow.async_step_cloud()
+            assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_final_creates_entry(self) -> None:
+        """Test final step creates config entry."""
+        flow = ConfigFlowHandler()
+        flow.data = {
+            CONF_FRIENDLY_NAME: "Test Wattpilot",
+            CONF_IP_ADDRESS: "192.168.1.100",
+            CONF_PASSWORD: "test",
+            CONF_CONNECTION: CONF_LOCAL,
+        }
+        flow.async_set_unique_id = AsyncMock()
+        flow._abort_if_unique_id_configured = MagicMock()
+        flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+
+        result = await flow.async_step_final()
+        assert result["type"] == "create_entry"
+        flow.async_set_unique_id.assert_called_once_with("192.168.1.100")
+
+    @pytest.mark.asyncio
+    async def test_async_step_final_uses_friendly_name_as_fallback(self) -> None:
+        """Test final step uses friendly name when IP not available."""
+        flow = ConfigFlowHandler()
+        flow.data = {
+            CONF_FRIENDLY_NAME: "Test Wattpilot",
+            CONF_SERIAL: "12345678",
+            CONF_PASSWORD: "test",
+            CONF_CONNECTION: CONF_CLOUD,
+        }
+        flow.async_set_unique_id = AsyncMock()
+        flow._abort_if_unique_id_configured = MagicMock()
+        flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+
+        result = await flow.async_step_final()
+        flow.async_set_unique_id.assert_called_once_with("Test Wattpilot")
+
+    @pytest.mark.asyncio
+    async def test_async_step_final_aborts_if_duplicate(self) -> None:
+        """Test final step aborts if unique ID already configured."""
+        flow = ConfigFlowHandler()
+        flow.data = {
+            CONF_FRIENDLY_NAME: "Test",
+            CONF_IP_ADDRESS: "192.168.1.100",
+            CONF_PASSWORD: "test",
+        }
+        flow.async_set_unique_id = AsyncMock()
+        flow._abort_if_unique_id_configured = MagicMock(
+            side_effect=Exception("Already configured")
+        )
+
+        with pytest.raises(Exception):
+            await flow.async_step_final()
+
+
+class TestOptionsFlow:
+    """Test options flow."""
+
+    @pytest.mark.asyncio
+    async def test_options_flow_init(self) -> None:
+        """Test options flow initialization."""
+        flow = OptionsFlowHandler()
+        assert hasattr(flow, "data")
+        assert isinstance(flow.data, dict)
+
+    @pytest.mark.asyncio
+    async def test_async_step_init_routes_to_connection(self) -> None:
+        """Test init step routes to connection for user source."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.source = "user"
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+
+            with patch.object(
+                flow, "async_step_config_connection", return_value=MagicMock()
+            ) as mock_conn:
+                await flow.async_step_init()
+                mock_conn.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_init_aborts_unsupported_source(self) -> None:
+        """Test init step aborts for unsupported source."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.source = "discovery"
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+            result = await flow.async_step_init()
+            assert result["type"] == "abort"
+            flow.async_abort.assert_called_once_with(reason="not_supported")
+
+    @pytest.mark.asyncio
+    async def test_async_step_init_exception_handling(self) -> None:
+        """Test init step handles exceptions."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.source = MagicMock(side_effect=Exception("test"))
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+            result = await flow.async_step_init()
+            assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_connection_shows_form(self) -> None:
+        """Test config connection shows form when no input."""
+        flow = OptionsFlowHandler()
+        flow.async_show_form = MagicMock(return_value={"type": "form"})
+
+        result = await flow.async_step_config_connection()
+        assert result["type"] == "form"
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_connection_routes_local(self) -> None:
+        """Test config connection routes to local."""
+        flow = OptionsFlowHandler()
+        user_input = {CONF_CONNECTION: CONF_LOCAL}
+
+        with patch.object(
+            flow, "async_step_config_local", return_value=MagicMock()
+        ) as mock_local:
+            await flow.async_step_config_connection(user_input)
+            mock_local.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_connection_routes_cloud(self) -> None:
+        """Test config connection routes to cloud."""
+        flow = OptionsFlowHandler()
+        user_input = {CONF_CONNECTION: CONF_CLOUD}
+
+        with patch.object(
+            flow, "async_step_config_cloud", return_value=MagicMock()
+        ) as mock_cloud:
+            await flow.async_step_config_connection(user_input)
+            mock_cloud.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_connection_invalid_connection(self) -> None:
+        """Test config connection aborts on invalid connection type."""
+        flow = OptionsFlowHandler()
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+        user_input = {CONF_CONNECTION: "invalid"}
+
+        result = await flow.async_step_config_connection(user_input)
+        assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_connection_exception_handling(self) -> None:
+        """Test config connection handles exceptions."""
+        flow = OptionsFlowHandler()
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+        with patch.object(flow, "async_show_form", side_effect=Exception("test")):
+            result = await flow.async_step_config_connection()
+            assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_local_shows_form(self) -> None:
+        """Test config local shows form when no input."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.data = {CONF_IP_ADDRESS: "192.168.1.100"}
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.async_show_form = MagicMock(return_value={"type": "form"})
+
+            with patch(
+                "custom_components.wattpilot.config_flow.async_get_OPTIONS_LOCAL_SCHEMA",
+                return_value=MagicMock(),
+            ):
+                result = await flow.async_step_config_local()
+                assert result["type"] == "form"
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_local_processes_input(self) -> None:
+        """Test config local processes user input."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.data = {}
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            user_input = {
+                CONF_FRIENDLY_NAME: "Updated",
+                CONF_IP_ADDRESS: "192.168.1.101",
+                CONF_PASSWORD: "newpass",
+            }
+
+            with (
+                patch(
+                    "custom_components.wattpilot.config_flow.async_get_OPTIONS_LOCAL_SCHEMA",
+                    return_value=MagicMock(),
+                ),
+                patch.object(
+                    flow, "async_step_final", return_value=MagicMock()
+                ) as mock_final,
+            ):
+                await flow.async_step_config_local(user_input)
+                assert flow.data[CONF_CONNECTION] == CONF_LOCAL
+                mock_final.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_local_exception_handling(self) -> None:
+        """Test config local handles exceptions."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.data = {}
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+            with patch(
+                "custom_components.wattpilot.config_flow.async_get_OPTIONS_LOCAL_SCHEMA",
+                side_effect=Exception("test"),
+            ):
+                result = await flow.async_step_config_local()
+                assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_cloud_shows_form(self) -> None:
+        """Test config cloud shows form when no input."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.data = {CONF_SERIAL: "12345678"}
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.async_show_form = MagicMock(return_value={"type": "form"})
+
+            with patch(
+                "custom_components.wattpilot.config_flow.async_get_OPTIONS_CLOUD_SCHEMA",
+                return_value=MagicMock(),
+            ):
+                result = await flow.async_step_config_cloud()
+                assert result["type"] == "form"
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_cloud_processes_input(self) -> None:
+        """Test config cloud processes user input."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.data = {}
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            user_input = {
+                CONF_FRIENDLY_NAME: "Updated",
+                CONF_SERIAL: "87654321",
+                CONF_PASSWORD: "newpass",
+            }
+
+            with (
+                patch(
+                    "custom_components.wattpilot.config_flow.async_get_OPTIONS_CLOUD_SCHEMA",
+                    return_value=MagicMock(),
+                ),
+                patch.object(
+                    flow, "async_step_final", return_value=MagicMock()
+                ) as mock_final,
+            ):
+                await flow.async_step_config_cloud(user_input)
+                assert flow.data[CONF_CONNECTION] == CONF_CLOUD
+                mock_final.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_cloud_exception_handling(self) -> None:
+        """Test config cloud handles exceptions."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.data = {}
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+            with patch(
+                "custom_components.wattpilot.config_flow.async_get_OPTIONS_CLOUD_SCHEMA",
+                side_effect=Exception("test"),
+            ):
+                result = await flow.async_step_config_cloud()
+                assert result["type"] == "abort"
+
+    @pytest.mark.asyncio
+    async def test_async_step_final_creates_entry(self) -> None:
+        """Test final step creates options entry."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.state = ConfigEntryState.LOADED
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.data = {
+                CONF_FRIENDLY_NAME: "Test",
+                CONF_IP_ADDRESS: "192.168.1.100",
+            }
+            flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+
+            result = await flow.async_step_final()
+            assert result["type"] == "create_entry"
+
+    @pytest.mark.asyncio
+    async def test_async_step_final_handles_error_state(
+        self, mock_hass: MagicMock
+    ) -> None:
+        """Test final step handles setup error state."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.state = ConfigEntryState.SETUP_ERROR
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.hass = mock_hass
+            flow.data = {CONF_FRIENDLY_NAME: "Test"}
+            flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+
+            with patch(
+                "custom_components.wattpilot.config_flow.options_update_listener",
+                return_value=AsyncMock(),
+            ) as mock_listener:
+                result = await flow.async_step_final()
+                mock_listener.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_final_exception_handling(self) -> None:
+        """Test final step handles exceptions."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.state = ConfigEntryState.LOADED
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            flow.data = {CONF_FRIENDLY_NAME: "Test"}
+            flow.async_create_entry = MagicMock(side_effect=Exception("test"))
+            flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+            result = await flow.async_step_final()
+            assert result["type"] == "abort"
+
+    def test_async_get_options_flow(self) -> None:
+        """Test getting the options flow handler."""
+        config_entry = MagicMock()
+        handler = ConfigFlowHandler.async_get_options_flow(config_entry)
+        assert isinstance(handler, OptionsFlowHandler)

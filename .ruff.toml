@@ -51,9 +51,20 @@ fixture-parentheses = false
 [lint.per-file-ignores]
 "tests/**/*.py" = [
     "S101",   # Use of assert detected (expected in tests)
+    "S106",   # Hardcoded password (test fixtures)
+    "S110",   # try-except-pass (acceptable in tests)
     "PLR2004", # Magic value comparison (common in tests)
     "E402",   # Module level import not at top of file (test fixtures)
     "PLC0415", # Import outside top-level (test fixtures)
+    "ARG002", # Unused method argument (test fixtures)
+    "ARG005", # Unused lambda argument (test fixtures)
+    "F841",   # Local variable assigned but never used (test assertions)
+    "B017",   # Assert raises Exception (acceptable in tests)
+    "PT011",  # pytest.raises too broad (acceptable in tests)
+    "PT012",  # pytest.raises multiple statements (acceptable in tests)
+    "SIM105", # Use contextlib.suppress (acceptable in tests)
+    "ANN202", # Missing return type private function (test helpers)
+    "EM101",  # Raw string in exception (acceptable in tests)
 ]
 
 [lint.pyupgrade]

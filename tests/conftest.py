@@ -260,11 +260,15 @@ def mock_disconnect_charger() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_config_entry(mock_config_entry_data: dict) -> Any:
-    """Create a mock config entry."""
+def mock_config_entry(
+    mock_config_entry_data: dict, mock_coordinator: MagicMock, mock_charger: MagicMock
+) -> Any:
+    """Create a mock config entry with runtime_data."""
     from homeassistant.config_entries import ConfigEntry
 
-    return ConfigEntry(
+    from custom_components.wattpilot.types import WattpilotRuntimeData
+
+    entry = ConfigEntry(
         version=1,
         minor_version=0,
         domain=DOMAIN,
@@ -276,3 +280,13 @@ def mock_config_entry(mock_config_entry_data: dict) -> Any:
         options={},
         subentries_data={},
     )
+
+    # Add runtime_data
+    entry.runtime_data = WattpilotRuntimeData(
+        charger=mock_charger,
+        coordinator=mock_coordinator,
+        push_entities={},
+        params=mock_config_entry_data,
+    )
+
+    return entry

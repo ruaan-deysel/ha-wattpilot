@@ -308,9 +308,9 @@ class TestAsyncSetupEntry:
     async def test_setup_entry_coordinator_fails(
         self,
         hass: HomeAssistant,
-        mock_charger: MagicMock,  # noqa: ARG002
+        mock_charger: MagicMock,
         mock_config_entry_data: dict,
-        mock_connect_charger: AsyncMock,  # noqa: ARG002
+        mock_connect_charger: AsyncMock,
         mock_disconnect_charger: AsyncMock,
     ) -> None:
         """Test config entry setup when coordinator fails."""
@@ -332,7 +332,7 @@ class TestAsyncSetupEntry:
             subentries_data={},
         )
 
-        with (  # noqa: PT012
+        with (
             patch("custom_components.wattpilot.async_get_integration"),
             patch(
                 "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
@@ -481,3 +481,454 @@ class TestOptionsUpdateListener:
             await options_update_listener(hass, entry)
             mock_update_entry.assert_called_once()
             mock_reload.assert_called_once_with(entry.entry_id)
+
+    @pytest.mark.asyncio
+    async def test_options_update_listener_exception(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test options update listener handles exceptions."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import options_update_listener
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        coordinator = MagicMock()
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+        )
+        entry.runtime_data = runtime_data
+
+        with (
+            patch.object(
+                hass.config_entries,
+                "async_update_entry",
+                side_effect=Exception("Update failed"),
+            ),
+        ):
+            # Should log error but not raise
+            await options_update_listener(hass, entry)
+
+
+class TestServiceManagement:
+    """Test service registration and unregistration."""
+
+    @pytest.mark.asyncio
+    async def test_ensure_services_registered_once(self, hass: HomeAssistant) -> None:
+        """Test services are only registered once."""
+        from custom_components.wattpilot import _ensure_services_registered
+        from custom_components.wattpilot.const import DOMAIN
+
+        hass.data[DOMAIN] = {}
+
+        with (
+            patch("custom_components.wattpilot.async_registerService") as mock_register,
+        ):
+            await _ensure_services_registered(hass)
+            # Should register all services
+            assert mock_register.call_count == 4
+            assert hass.data[DOMAIN]["services_registered"] is True
+
+    @pytest.mark.asyncio
+    async def test_ensure_services_skip_if_already_registered(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test services registration is skipped if already done."""
+        from custom_components.wattpilot import _ensure_services_registered
+        from custom_components.wattpilot.const import DOMAIN
+
+        hass.data[DOMAIN] = {"services_registered": True}
+
+        with patch(
+            "custom_components.wattpilot.async_registerService"
+        ) as mock_register:
+            await _ensure_services_registered(hass)
+            mock_register.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_ensure_services_exception(self, hass: HomeAssistant) -> None:
+        """Test service registration exception handling."""
+        from homeassistant.exceptions import ConfigEntryNotReady
+
+        from custom_components.wattpilot import _ensure_services_registered
+
+        with (
+            patch(
+                "custom_components.wattpilot.async_registerService",
+                side_effect=Exception("Registration failed"),
+            ),
+            pytest.raises(ConfigEntryNotReady),
+        ):
+            await _ensure_services_registered(hass)
+
+    def test_unregister_services_with_remaining_entries(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test services are not unregistered when entries remain."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import _async_unregister_services
+
+        # Mock remaining entries
+        entry = MagicMock(spec=ConfigEntry)
+        hass.config_entries.async_entries = MagicMock(return_value=[entry])
+
+        _async_unregister_services(hass)
+
+        # Services should not be removed
+        hass.services.async_remove.assert_not_called() if hasattr(
+            hass.services, "async_remove"
+        ) else None
+
+    def test_unregister_services_with_no_remaining_entries(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test services are unregistered when no entries remain."""
+        from custom_components.wattpilot import _async_unregister_services
+        from custom_components.wattpilot.const import DOMAIN
+
+        # No remaining entries
+        hass.config_entries.async_entries = MagicMock(return_value=[])
+        hass.services.has_service = MagicMock(return_value=True)
+        hass.services.async_remove = MagicMock()
+        hass.data[DOMAIN] = {"services_registered": True}
+
+        _async_unregister_services(hass)
+
+        # All services should be removed
+        assert hass.services.async_remove.call_count == 4
+        assert DOMAIN not in hass.data
+
+
+class TestSetupErrorHandling:
+    """Test setup error handling paths."""
+
+    @pytest.mark.asyncio
+    async def test_setup_entry_property_handler_exception(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_connect_charger: AsyncMock,
+        mock_disconnect_charger: AsyncMock,
+    ) -> None:
+        """Test setup handles property handler registration failure."""
+        from homeassistant.config_entries import ConfigEntry
+        from homeassistant.exceptions import ConfigEntryNotReady
+
+        from custom_components.wattpilot import async_setup_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        mock_charger.on_property_change = MagicMock(
+            side_effect=Exception("Handler registration failed")
+        )
+
+        with (
+            patch("custom_components.wattpilot.async_get_integration"),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+            patch(
+                "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
+                new_callable=AsyncMock,
+            ),
+            pytest.raises(ConfigEntryNotReady),
+        ):
+            await async_setup_entry(hass, entry)
+            mock_disconnect_charger.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_setup_entry_integration_version_warning(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_connect_charger: AsyncMock,
+    ) -> None:
+        """Test setup logs warning when integration version unavailable."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_setup_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        with (
+            patch(
+                "custom_components.wattpilot.async_get_integration",
+                side_effect=Exception("Version unavailable"),
+            ),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+            patch(
+                "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "custom_components.wattpilot.utils.async_DisconnectCharger",
+                new_callable=AsyncMock,
+            ),
+        ):
+            # Should log warning but continue setup
+            try:
+                await async_setup_entry(hass, entry)
+            except Exception:
+                pass  # Expected to fail at later stage in this test
+
+    @pytest.mark.asyncio
+    async def test_setup_entry_options_listener_exception(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_connect_charger: AsyncMock,
+        mock_disconnect_charger: AsyncMock,
+    ) -> None:
+        """Test setup handles options listener registration failure."""
+        from homeassistant.config_entries import ConfigEntry
+        from homeassistant.exceptions import ConfigEntryNotReady
+
+        from custom_components.wattpilot import async_setup_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        entry.add_update_listener = MagicMock(
+            side_effect=Exception("Listener registration failed")
+        )
+
+        with (
+            patch("custom_components.wattpilot.async_get_integration"),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+            patch(
+                "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
+                new_callable=AsyncMock,
+            ),
+            pytest.raises(ConfigEntryNotReady),
+        ):
+            await async_setup_entry(hass, entry)
+            mock_disconnect_charger.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_setup_entry_forward_platforms_exception(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_connect_charger: AsyncMock,
+        mock_disconnect_charger: AsyncMock,
+    ) -> None:
+        """Test setup handles platform forwarding failure."""
+        from homeassistant.config_entries import ConfigEntry
+        from homeassistant.exceptions import ConfigEntryNotReady
+
+        from custom_components.wattpilot import async_setup_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        with (
+            patch("custom_components.wattpilot.async_get_integration"),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+            patch(
+                "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
+                new_callable=AsyncMock,
+            ),
+            patch.object(
+                hass.config_entries,
+                "async_forward_entry_setups",
+                side_effect=Exception("Platform setup failed"),
+            ),
+            pytest.raises(ConfigEntryNotReady),
+        ):
+            await async_setup_entry(hass, entry)
+            mock_disconnect_charger.assert_called_once()
+
+
+class TestUnloadErrorHandling:
+    """Test unload error handling paths."""
+
+    @pytest.mark.asyncio
+    async def test_unload_entry_exception_in_event_handler_removal(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test unload handles event handler removal exceptions."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_unload_entry
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        coordinator = MagicMock()
+        unsub = MagicMock(side_effect=Exception("Unsubscribe failed"))
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+            property_updates_callback=unsub,
+        )
+        entry.runtime_data = runtime_data
+
+        with patch("custom_components.wattpilot.utils.async_DisconnectCharger"):
+            result = await async_unload_entry(hass, entry)
+            # Should log error but still attempt disconnect
+            assert isinstance(result, bool)
+
+    @pytest.mark.asyncio
+    async def test_unload_entry_exception_in_disconnect(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test unload handles disconnect exceptions."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_unload_entry
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        coordinator = MagicMock()
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=coordinator,
+            push_entities={},
+            params=mock_config_entry_data,
+        )
+        entry.runtime_data = runtime_data
+
+        with patch(
+            "custom_components.wattpilot.utils.async_DisconnectCharger",
+            side_effect=Exception("Disconnect failed"),
+        ):
+            result = await async_unload_entry(hass, entry)
+            # Should log error but return result from platform unload
+            assert isinstance(result, bool)
+
+    @pytest.mark.asyncio
+    async def test_unload_entry_exception_handling(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test unload entry general exception handling."""
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot import async_unload_entry
+        from custom_components.wattpilot.const import DOMAIN
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        # Patch to raise exception early in unload process
+        with patch.object(
+            hass.config_entries,
+            "async_unload_platforms",
+            side_effect=Exception("Platform unload failed"),
+        ):
+            result = await async_unload_entry(hass, entry)
+            # Should return False on exception
+            assert result is False

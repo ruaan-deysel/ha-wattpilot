@@ -77,3 +77,6 @@ exclude_lines = [
 ]
 show_missing = true
 fail_under = 90
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S106", "ARG002", "F841", "B017"]
