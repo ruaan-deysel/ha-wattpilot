@@ -127,7 +127,7 @@ def mock_coordinator(mock_hass: MagicMock, mock_charger: MagicMock) -> MagicMock
     coordinator.last_update_success = True
     coordinator.async_config_entry_first_refresh = AsyncMock()
     coordinator.async_set_updated_data = MagicMock()
-    coordinator.async_handle_property_update = AsyncMock()
+    coordinator.async_handle_property_update = MagicMock()
     return coordinator
 
 

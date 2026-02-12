@@ -58,7 +58,7 @@ async def _async_handle_property_update(
         # Notify coordinator of property update
         coordinator = getattr(runtime_data, "coordinator", None)
         if coordinator is not None:
-            await coordinator.async_handle_property_update(identifier, value)
+            coordinator.async_handle_property_update(identifier, value)
 
         entity = runtime_data.push_entities.get(identifier)
         if entity is not None:

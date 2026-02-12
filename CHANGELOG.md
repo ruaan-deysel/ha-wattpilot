@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Coordinator Await TypeError**: Fixed `TypeError: object NoneType can't be used in 'await' expression` — `async_handle_property_update` is a sync `@callback` method, not async; removed incorrect `await` in property update handler
 - **Numeric Sensor Default State**: Fixed `ValueError` for sensors with numeric device classes (e.g., temperature) by returning `None` instead of `STATE_UNKNOWN` string when no value is available — HA requires `None` for numeric sensors, not the string `"unknown"`
 - **Sensor Device Classes**: Fixed device_class string to enum conversion preventing Energy Dashboard recognition
 - **Availability Handling**: Entities now properly check coordinator availability before reporting their own status
