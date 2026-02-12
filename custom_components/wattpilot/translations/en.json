@@ -9,6 +9,7 @@
     "error": {
       "cannot_connect": "Failed to connect to the charger. Please check the IP address and password.",
       "invalid_auth": "Invalid authentication. Please check your password.",
+      "invalid_ip": "Invalid IP address. Please enter a valid IPv4 or IPv6 address.",
       "unknown": "An unexpected error occurred."
     },
     "step": {
@@ -70,6 +71,7 @@
     "error": {
       "cannot_connect": "Failed to connect to the charger. Please check the IP address and password.",
       "invalid_auth": "Invalid authentication. Please check your password.",
+      "invalid_ip": "Invalid IP address. Please enter a valid IPv4 or IPv6 address.",
       "unknown": "An unexpected error occurred."
     },
     "step": {

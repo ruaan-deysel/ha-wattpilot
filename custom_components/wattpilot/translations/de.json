@@ -10,6 +10,7 @@
     "error": {
       "cannot_connect": "Verbindung zur Ladestation fehlgeschlagen. Bitte IP-Adresse und Passwort prüfen.",
       "invalid_auth": "Ungültige Authentifizierung. Bitte Passwort prüfen.",
+      "invalid_ip": "Ungültige IP-Adresse. Bitte eine gültige IPv4- oder IPv6-Adresse eingeben.",
       "unknown": "Ein unerwarteter Fehler ist aufgetreten."
     },
     "step": {
@@ -70,6 +71,7 @@
     "error": {
       "cannot_connect": "Verbindung zur Ladestation fehlgeschlagen. Bitte IP-Adresse und Passwort prüfen.",
       "invalid_auth": "Ungültige Authentifizierung. Bitte Passwort prüfen.",
+      "invalid_ip": "Ungültige IP-Adresse. Bitte eine gültige IPv4- oder IPv6-Adresse eingeben.",
       "unknown": "Ein unerwarteter Fehler ist aufgetreten."
     },
     "step": {

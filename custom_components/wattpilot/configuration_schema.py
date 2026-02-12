@@ -53,9 +53,7 @@ CONNECTION_SCHEMA: Final = vol.Schema(
 LOCAL_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_FRIENDLY_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Required(CONF_IP_ADDRESS, default=None): vol.All(
-            cv.string, validate_ip_address
-        ),
+        vol.Required(CONF_IP_ADDRESS, default=None): cv.string,
         vol.Required(CONF_PASSWORD, default=None): cv.string,
         vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
     }
@@ -84,7 +82,7 @@ async def async_get_OPTIONS_LOCAL_SCHEMA(current_data):
                 ): cv.string,
                 vol.Required(
                     CONF_IP_ADDRESS, default=current_data.get(CONF_IP_ADDRESS, None)
-                ): vol.All(cv.string, validate_ip_address),
+                ): cv.string,
                 vol.Required(
                     CONF_PASSWORD, default=current_data.get(CONF_PASSWORD, None)
                 ): cv.string,

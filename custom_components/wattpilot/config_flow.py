@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import Any, Final
 
@@ -33,6 +34,15 @@ from .const import (
 REDACT_CONFIG = {CONF_PASSWORD}
 
 _LOGGER: Final = logging.getLogger(__name__)
+
+
+def _validate_ip(value: str) -> bool:
+    """Return True if value is a valid IPv4/IPv6 address."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
 
 
 class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -119,6 +129,13 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     DOMAIN,
                     async_redact_data(user_input, REDACT_CONFIG),
                 )
+                if not _validate_ip(user_input.get(CONF_IP_ADDRESS, "")):
+                    errors[CONF_IP_ADDRESS] = "invalid_ip"
+                    return self.async_show_form(
+                        step_id=CONF_LOCAL,
+                        data_schema=LOCAL_SCHEMA,
+                        errors=errors,
+                    )
                 user_input[CONF_CONNECTION] = CONF_LOCAL
                 self.data = user_input
                 return await self.async_step_final()
@@ -291,6 +308,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 "%s - OptionsFlowHandler: async_step_config_local - user_input",
                 DOMAIN,
             )
+            if not _validate_ip(user_input.get(CONF_IP_ADDRESS, "")):
+                return self.async_show_form(
+                    step_id="config_local",
+                    data_schema=options_local_schema,
+                    errors={CONF_IP_ADDRESS: "invalid_ip"},
+                )
             user_input[CONF_CONNECTION] = CONF_LOCAL
             self.data.update(user_input)
             _LOGGER.debug(

@@ -110,6 +110,18 @@ class TestConfigFlowDataValidation:
             with pytest.raises(vol.Invalid):
                 validate_ip_address(ip)
 
+    def test_validate_ip_helper(self) -> None:
+        """Test the _validate_ip helper used in config flow step handlers."""
+        from custom_components.wattpilot.config_flow import _validate_ip
+
+        assert _validate_ip("192.168.1.100") is True
+        assert _validate_ip("10.0.0.1") is True
+        assert _validate_ip("::1") is True
+        assert _validate_ip("fe80::1") is True
+        assert _validate_ip("256.1.1.1") is False
+        assert _validate_ip("not.an.ip") is False
+        assert _validate_ip("") is False
+
     def test_config_constants(self) -> None:
         """Test configuration constants."""
         assert DOMAIN == "wattpilot"
@@ -221,6 +233,25 @@ class TestConfigFlowUser:
             await flow.async_step_local(user_input)
             assert flow.data[CONF_CONNECTION] == CONF_LOCAL
             mock_final.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_local_invalid_ip(self) -> None:
+        """Test local step returns form error for invalid IP address."""
+        flow = ConfigFlowHandler()
+        form_result = {"type": "form", "errors": {CONF_IP_ADDRESS: "invalid_ip"}}
+        flow.async_show_form = MagicMock(return_value=form_result)
+
+        user_input = {
+            CONF_FRIENDLY_NAME: "Test",
+            CONF_IP_ADDRESS: "not.an.ip",
+            CONF_PASSWORD: "test",
+        }
+
+        result = await flow.async_step_local(user_input)
+        assert result["type"] == "form"
+        flow.async_show_form.assert_called_once()
+        call_kwargs = flow.async_show_form.call_args[1]
+        assert call_kwargs["errors"][CONF_IP_ADDRESS] == "invalid_ip"
 
     @pytest.mark.asyncio
     async def test_async_step_local_exception_handling(self) -> None:
@@ -472,6 +503,31 @@ class TestOptionsFlow:
                 await flow.async_step_config_local(user_input)
                 assert flow.data[CONF_CONNECTION] == CONF_LOCAL
                 mock_final.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_step_config_local_invalid_ip(self) -> None:
+        """Test config local returns form error for invalid IP address."""
+        mock_config_entry = MagicMock()
+        mock_config_entry.data = {}
+
+        with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
+            flow = OptionsFlowHandler()
+            form_result = {"type": "form", "errors": {CONF_IP_ADDRESS: "invalid_ip"}}
+            flow.async_show_form = MagicMock(return_value=form_result)
+            user_input = {
+                CONF_FRIENDLY_NAME: "Updated",
+                CONF_IP_ADDRESS: "256.1.1.1",
+                CONF_PASSWORD: "newpass",
+            }
+
+            with patch(
+                "custom_components.wattpilot.config_flow.async_get_OPTIONS_LOCAL_SCHEMA",
+                return_value=MagicMock(),
+            ):
+                result = await flow.async_step_config_local(user_input)
+                assert result["type"] == "form"
+                call_kwargs = flow.async_show_form.call_args[1]
+                assert call_kwargs["errors"][CONF_IP_ADDRESS] == "invalid_ip"
 
     @pytest.mark.asyncio
     async def test_async_step_config_local_exception_handling(self) -> None:
