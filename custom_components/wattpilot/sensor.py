@@ -109,6 +109,11 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
         """Async: Validate the given state for sensor specific requirements."""
         try:
             if state is None or state == "None":
+                # For sensors with a numeric device_class and unit, return None
+                # so HA treats it as "unknown" without raising ValueError.
+                # Only use STATE_UNKNOWN for text-based sensors.
+                if self._attr_native_unit_of_measurement is not None:
+                    return None
                 state = STATE_UNKNOWN
             elif hasattr(self, "_html_unescape") and self._html_unescape:
                 state = html.unescape(state)

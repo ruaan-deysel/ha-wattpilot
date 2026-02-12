@@ -56,16 +56,16 @@ class TestSelectValidation:
             charger_key="test_prop",
             name="Test",
             source=SOURCE_PROPERTY,
-            options={1: "one", 2: "two"},  # 99 not in this dict
+            select_options={1: "one", 2: "two"},  # 99 not in this dict
         )
 
         entity = ChargerSelect(mock_hass, mock_config_entry, desc, mock_charger)
 
-        # Should return STATE_UNKNOWN when value not found in reverse lookup
-        option = entity.current_option
+        # Trigger validation with value not in options
         from homeassistant.const import STATE_UNKNOWN
 
-        assert option == STATE_UNKNOWN
+        result = await entity._async_update_validate_platform_state(99)
+        assert result == STATE_UNKNOWN
 
 
 class TestUpdateVersionParsing:

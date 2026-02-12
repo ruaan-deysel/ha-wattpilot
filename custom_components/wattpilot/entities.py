@@ -249,7 +249,7 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                 sentinel = object()
                 prop_value = GetChargerProp(self._charger, self._identifier, sentinel)
                 if prop_value is sentinel:
-                    _LOGGER.error(
+                    _LOGGER.warning(
                         "%s - %s: __init__: Charger does not have property: %s (maybe an attribute?)",
                         self._charger_id,
                         self._identifier,
@@ -293,9 +293,7 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
             setattr(
                 self,
                 self._state_attr,
-                description.default_state
-                if description.default_state is not None
-                else STATE_UNKNOWN,
+                description.default_state,
             )
 
             self._init_platform_specific()
