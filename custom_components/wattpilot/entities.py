@@ -230,7 +230,23 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                 ns_val = GetChargerProp(
                     self._charger, self._identifier, self._default_state
                 )
-                if ns_val is None or ns_val[int(self._namespace_id)] is None:
+                try:
+                    ns_idx = int(self._namespace_id)
+                except (TypeError, ValueError):
+                    _LOGGER.error(
+                        "%s - %s: __init__: Invalid namespacelist index: %s[%s]",
+                        self._charger_id,
+                        self._identifier,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    return
+                if (
+                    not isinstance(ns_val, (list, tuple))
+                    or ns_idx < 0
+                    or ns_idx >= len(ns_val)
+                    or ns_val[ns_idx] is None
+                ):
                     _LOGGER.error(
                         "%s - %s: __init__: Charger does not have namespacelist item: %s[%s]",
                         self._charger_id,
@@ -337,7 +353,13 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
             ns_val = GetChargerProp(
                 self._charger, self._identifier, self._default_state
             )
-            if ns_val is not None and ns_val[int(self._namespace_id)] is None:
+            try:
+                ns_idx = int(self._namespace_id)
+            except (TypeError, ValueError):
+                ns_idx = -1
+            if isinstance(ns_val, (list, tuple)) and (
+                ns_idx < 0 or ns_idx >= len(ns_val) or ns_val[ns_idx] is None
+            ):
                 _LOGGER.debug(
                     "%s - %s: available: false because unknown namespacelist item: %s",
                     self._charger_id,
@@ -473,7 +495,26 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                 state = await async_GetChargerProp(
                     self._charger, self._identifier, self._default_state
                 )
-                state = state[int(self._namespace_id)]
+                try:
+                    ns_idx = int(self._namespace_id)
+                except (TypeError, ValueError):
+                    _LOGGER.error(
+                        "%s - %s: async_local_poll invalid namespacelist index: %s",
+                        self._charger_id,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    return
+                if not isinstance(state, (list, tuple)) or ns_idx >= len(state):
+                    _LOGGER.error(
+                        "%s - %s: async_local_poll namespacelist index out of range: %s",
+                        self._charger_id,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    return
+
+                state = state[ns_idx]
                 _LOGGER.debug(
                     "%s - %s: async_local_poll namespace pre validate state of %s: %s",
                     self._charger_id,
@@ -520,7 +561,21 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
             if self._source == SOURCE_ATTRIBUTE:
                 pass
             elif self._source == SOURCE_NAMESPACELIST:
-                state = state[int(self._namespace_id)]
+                try:
+                    ns_idx = int(self._namespace_id)
+                except (TypeError, ValueError):
+                    _LOGGER.error(
+                        "%s - %s: async_local_push invalid namespacelist index: %s",
+                        self._charger_id,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    state = None
+                else:
+                    if isinstance(state, (list, tuple)) and ns_idx < len(state):
+                        state = state[ns_idx]
+                    else:
+                        state = None
                 state = await self._async_update_validate_property(state)
             elif self._source == SOURCE_PROPERTY:
                 state = await self._async_update_validate_property(state)
@@ -530,7 +585,7 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                 setattr(self, self._state_attr, state)
                 self.async_write_ha_state()
             else:
-                await self.hass.async_create_task(self.async_local_poll())
+                await self.async_local_poll()
         except Exception as e:
             if type(e).__name__ == "NoEntitySpecifiedError" and not initwait:
                 _LOGGER.debug(

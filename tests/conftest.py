@@ -242,20 +242,32 @@ def mock_charger_functions(mock_charger: MagicMock) -> Generator[None]:
 @pytest.fixture
 def mock_connect_charger(mock_charger: MagicMock) -> Generator[AsyncMock]:
     """Mock async_ConnectCharger to return our mock charger."""
-    with patch(
-        "custom_components.wattpilot.utils.async_ConnectCharger",
-        return_value=mock_charger,
-    ) as mock_connect:
+    with (
+        patch(
+            "custom_components.wattpilot.async_ConnectCharger",
+            return_value=mock_charger,
+        ) as mock_connect,
+        patch(
+            "custom_components.wattpilot.utils.async_ConnectCharger",
+            return_value=mock_charger,
+        ),
+    ):
         yield mock_connect
 
 
 @pytest.fixture
 def mock_disconnect_charger() -> Generator[AsyncMock]:
     """Mock async_DisconnectCharger."""
-    with patch(
-        "custom_components.wattpilot.utils.async_DisconnectCharger",
-        return_value=None,
-    ) as mock_disconnect:
+    with (
+        patch(
+            "custom_components.wattpilot.async_DisconnectCharger",
+            return_value=None,
+        ) as mock_disconnect,
+        patch(
+            "custom_components.wattpilot.utils.async_DisconnectCharger",
+            return_value=None,
+        ),
+    ):
         yield mock_disconnect
 
 

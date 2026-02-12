@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import Final
 
@@ -30,6 +31,16 @@ from .const import (
 
 _LOGGER: Final = logging.getLogger(__name__)
 
+
+def validate_ip_address(value: str) -> str:
+    """Validate an IPv4/IPv6 address string."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError as err:
+        raise vol.Invalid(f"Invalid IP address: {value}") from err
+    return value
+
+
 CONNECTION_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_CONNECTION, default=CONF_LOCAL): SelectSelector(
@@ -42,7 +53,9 @@ CONNECTION_SCHEMA: Final = vol.Schema(
 LOCAL_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_FRIENDLY_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Required(CONF_IP_ADDRESS, default=None): cv.string,
+        vol.Required(CONF_IP_ADDRESS, default=None): vol.All(
+            cv.string, validate_ip_address
+        ),
         vol.Required(CONF_PASSWORD, default=None): cv.string,
         vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
     }
@@ -71,7 +84,7 @@ async def async_get_OPTIONS_LOCAL_SCHEMA(current_data):
                 ): cv.string,
                 vol.Required(
                     CONF_IP_ADDRESS, default=current_data.get(CONF_IP_ADDRESS, None)
-                ): cv.string,
+                ): vol.All(cv.string, validate_ip_address),
                 vol.Required(
                     CONF_PASSWORD, default=current_data.get(CONF_PASSWORD, None)
                 ): cv.string,

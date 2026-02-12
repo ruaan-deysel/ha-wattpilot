@@ -62,9 +62,19 @@ class TestButtonDescriptions:
 
     def test_stop_charging_button_exists(self) -> None:
         """Test stop_charging button is defined."""
-        stop_charging = get_button_desc_by_key("frc")
+        from custom_components.wattpilot.descriptions import BUTTON_DESCRIPTIONS
+
+        stop_charging = next(
+            (
+                d
+                for d in BUTTON_DESCRIPTIONS
+                if d.charger_key == "frc" and d.set_value == 1
+            ),
+            None,
+        )
 
         assert stop_charging is not None
+        assert stop_charging.set_value == 1
 
 
 class TestButtonEntity:

@@ -8,6 +8,15 @@ cd "$(dirname "$0")/.."
 if ! command -v uv &> /dev/null; then
     echo "Installing uv..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    # Ensure uv is available in current session (common install locations)
+    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
+    if ! command -v uv &> /dev/null; then
+        echo "Error: 'uv' was installed but is not on PATH." >&2
+        echo "Please add uv to your PATH and re-run scripts/setup." >&2
+        exit 1
+    fi
 fi
 
 # Sync all dependencies (including dev group)

@@ -28,7 +28,7 @@ Dependency management uses `uv` with `pyproject.toml` + `uv.lock`. Config in `co
 
 ## wattpilot-api Package
 
-The integration uses the external `wattpilot-api>=1.0.0` package (from PyPI). Key types and patterns:
+The integration uses the external `wattpilot-api>=1.1.0` package (from PyPI). Key types and patterns:
 
 ```python
 from wattpilot_api import Wattpilot, LoadMode, CarStatus
@@ -213,11 +213,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     )
 
     # Create entity from each description
-    entities = [
-        ChargerSensor(hass, entry, desc, charger)
-        for desc in descriptions
-        if not getattr(entity, "_init_failed", False)
-    ]
+    entities: list[ChargerSensor] = []
+    for desc in descriptions:
+        entity = ChargerSensor(hass, entry, desc, charger)
+        if getattr(entity, "_init_failed", False):
+            continue
+        entities.append(entity)
 
     if entities:
         async_add_entities(entities)

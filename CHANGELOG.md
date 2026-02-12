@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Infrastructure**: Created test fixtures with mock charger properties and expected entity states for reliable testing
 - **Diagnostics Platform**: Added diagnostics support with sensitive data redaction (passwords, WiFi credentials, serial numbers)
 - **Exception Translations**: Added user-friendly exception messages in English and German for charger unavailable, connection failed, and invalid property errors
-- **Service Icons**: Added icons for all services (set_next_trip, set_goe_cloud, set_debug_properties, disconnect_charger, reconnect_charger)
+- **Service Icons**: Added icons for all services (set_next_trip, set_goe_cloud, disconnect_charger, reconnect_charger)
 - **Type Annotations**: Added `py.typed` marker file for PEP 561 compliance indicating inline type annotations
 - **Pre-commit Hooks**: Configured pre-commit with ruff, codespell, yamllint, and prettier for code quality
 - **CI/CD Workflow**: Added continuous integration with pytest, coverage reporting, and Codecov integration

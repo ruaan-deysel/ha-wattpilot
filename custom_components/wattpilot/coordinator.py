@@ -88,17 +88,12 @@ class WattpilotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         This is called when the WebSocket receives a property update.
         """
-        if self.data is None:
-            self.data = {}
+        current_data: dict[str, Any] = self.data or {}
+        updated_data = dict(current_data)
+        updated_data[identifier] = value
 
-        # Update the specific property in our data
-        self.data[identifier] = value
-
-        # Reset error count on successful update
-        self._failed_update_count = 0
-
-        # Notify all listeners of the update
-        self.async_update_listeners()
+        # Mark update success and notify listeners via coordinator helper
+        self.async_set_updated_data(updated_data)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """

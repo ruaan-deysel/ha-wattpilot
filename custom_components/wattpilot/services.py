@@ -12,12 +12,12 @@ from homeassistant.const import (
     CONF_API_KEY,
     CONF_DEVICE_ID,
     CONF_EXTERNAL_URL,
-    CONF_PARAMS,
     CONF_TRIGGER_TIME,
 )
 
 from .const import (
     CONF_CLOUD_API,
+    CONF_PARAMS,
     DOMAIN,
 )
 from .utils import (
@@ -30,6 +30,37 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall
 
 _LOGGER: Final = logging.getLogger(__name__)
+
+_TRIGGER_TIME_PARTS: Final = 3
+_TRIGGER_TIME_MAX_HOUR: Final = 23
+_TRIGGER_TIME_MAX_MINUTE: Final = 59
+_TRIGGER_TIME_MAX_SECOND: Final = 59
+_REDACT_MIN_LEN: Final = 8
+
+
+def _parse_trigger_time(trigger_time: Any) -> datetime.time | None:
+    if not isinstance(trigger_time, str):
+        return None
+
+    parts = trigger_time.split(":")
+    if len(parts) != _TRIGGER_TIME_PARTS:
+        return None
+
+    try:
+        hour = int(parts[0])
+        minute = int(parts[1])
+        second = int(parts[2])
+    except (TypeError, ValueError):
+        return None
+
+    if not (
+        0 <= hour <= _TRIGGER_TIME_MAX_HOUR
+        and 0 <= minute <= _TRIGGER_TIME_MAX_MINUTE
+        and 0 <= second <= _TRIGGER_TIME_MAX_SECOND
+    ):
+        return None
+
+    return datetime.time(hour, minute, second)
 
 
 async def async_registerService(hass: HomeAssistant, name: str, service) -> None:
@@ -81,9 +112,15 @@ async def async_service_SetNextTrip(hass: HomeAssistant, call: ServiceCall) -> N
             )
             return
 
-        # Parse HH:MM:SS string to datetime.time for the API
-        parts = [int(p) for p in trigger_time.split(":")]
-        departure = datetime.time(*parts)
+        departure = _parse_trigger_time(trigger_time)
+        if departure is None:
+            _LOGGER.error(
+                "%s - async_service_SetNextTrip: Invalid %s format (expected HH:MM:SS): %s",
+                DOMAIN,
+                CONF_TRIGGER_TIME,
+                trigger_time,
+            )
+            return
 
         _LOGGER.debug(
             "%s - async_service_SetNextTrip: setting departure %s for charger: %s",
@@ -147,11 +184,17 @@ async def async_service_SetGoECloud(hass: HomeAssistant, call: ServiceCall) -> N
             cloud_info = await charger.enable_cloud_api()
             entry_data[CONF_API_KEY] = cloud_info.api_key
             entry_data[CONF_EXTERNAL_URL] = cloud_info.url
+
+            redacted_key = "<redacted>"
+            if getattr(cloud_info, "api_key", None):
+                api_key = str(cloud_info.api_key)
+                if len(api_key) >= _REDACT_MIN_LEN:
+                    redacted_key = f"{api_key[:4]}…{api_key[-4:]}"
             _LOGGER.info(
                 "%s - async_service_SetGoECloud: %s cloud API enabled (key: %s, url: %s)",
                 DOMAIN,
                 charger.name,
-                cloud_info.api_key,
+                redacted_key,
                 cloud_info.url,
             )
         else:

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Final
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
-    CONF_PARAMS,
     CONF_PASSWORD,
 )
 from homeassistant.helpers import device_registry as dr
@@ -19,6 +18,7 @@ from .const import (
     CONF_CLOUD,
     CONF_CONNECTION,
     CONF_LOCAL,
+    CONF_PARAMS,
     CONF_PUSH_ENTITIES,
     CONF_SERIAL,
     DEFAULT_NAME,
@@ -35,14 +35,14 @@ _LOGGER: Final = logging.getLogger(__name__)
 
 
 async def async_property_update_handler(
-    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: str
+    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: Any
 ) -> None:
     """Async callback for charger property updates, dispatches to entities."""
     await _async_handle_property_update(hass, entry, identifier, value)
 
 
 async def _async_handle_property_update(
-    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: str
+    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: Any
 ) -> None:
     """Async: handle charger property updates."""
     try:

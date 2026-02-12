@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from importlib.metadata import PackageNotFoundError, version
 from typing import (
     Any,
     Final,
@@ -14,7 +15,6 @@ from homeassistant.const import (
     CONF_PASSWORD,
 )
 from homeassistant.core import HomeAssistant
-from importlib_metadata import version
 
 from .const import (
     CONF_SERIAL,
@@ -104,12 +104,17 @@ async def async_get_config_entry_diagnostics(
             "%s - diagnostics: Add python modules version",
             entry.entry_id,
         )
-        diag["modules"] = {
-            "wattpilot_api_version": version("wattpilot-api"),
-            "pyyaml": version("pyyaml"),
-            "importlib_metadata": version("importlib_metadata"),
-            "packaging": version("packaging"),
-        }
+        modules: dict[str, str | None] = {}
+        for package_name, key in (
+            ("wattpilot-api", "wattpilot_api_version"),
+            ("packaging", "packaging"),
+        ):
+            try:
+                modules[key] = version(package_name)
+            except PackageNotFoundError:
+                modules[key] = None
+
+        diag["modules"] = modules
     except Exception as e:
         _LOGGER.error(
             "%s - diagnostics: Add python modules version failed: %s (%s.%s)",

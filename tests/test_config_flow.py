@@ -96,21 +96,19 @@ class TestConfigFlowDataValidation:
 
     def test_ip_address_format_validation(self) -> None:
         """Test IP address format validation."""
-        import re
+        import voluptuous as vol
 
-        ip_pattern = re.compile(
-            r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
-            r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-        )
+        from custom_components.wattpilot.configuration_schema import validate_ip_address
 
         valid_ips = ["192.168.1.100", "10.0.0.1", "172.16.0.1", "255.255.255.255"]
         invalid_ips = ["256.1.1.1", "192.168.1", "not.an.ip", ""]
 
         for ip in valid_ips:
-            assert ip_pattern.match(ip), f"Valid IP {ip} not matched"
+            assert validate_ip_address(ip) == ip
 
         for ip in invalid_ips:
-            assert not ip_pattern.match(ip), f"Invalid IP {ip} should not match"
+            with pytest.raises(vol.Invalid):
+                validate_ip_address(ip)
 
     def test_config_constants(self) -> None:
         """Test configuration constants."""

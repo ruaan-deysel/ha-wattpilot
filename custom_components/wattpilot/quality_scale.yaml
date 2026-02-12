@@ -62,8 +62,8 @@ rules:
     status: todo
     comment: Options flow exists but not documented externally.
   docs-troubleshooting:
-    status: todo
-    comment: No troubleshooting docs.
+    status: done
+    comment: Troubleshooting section added to README.md.
   diagnostics:
     status: done
     comment: Full diagnostics with redacted sensitive data.
@@ -109,8 +109,8 @@ rules:
     status: todo
     comment: Push-based updates not documented externally.
   docs-examples:
-    status: todo
-    comment: No automation examples provided.
+    status: done
+    comment: README includes a Next Trip automation example.
   docs-known-limitations:
     status: todo
     comment: Not documented.

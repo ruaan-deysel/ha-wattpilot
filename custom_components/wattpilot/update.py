@@ -82,7 +82,6 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
 
     _state_attr = "_attr_latest_version"
     _dummy_version = "0.0.1"
-    _available_versions: dict[str, str] = {}
     entity_description: WattpilotUpdateEntityDescription
 
     def _init_platform_specific(self) -> None:
@@ -91,6 +90,7 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
         _LOGGER.debug(
             "%s - %s: _init_platform_specific", self._charger_id, self._identifier
         )
+        self._available_versions: dict[str, str] = {}
         self._identifier_installed = desc.id_installed
         self._identifier_trigger = desc.id_trigger
 

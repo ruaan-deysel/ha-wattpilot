@@ -11,12 +11,11 @@ from homeassistant.const import (
     CONF_API_KEY,
     CONF_DEVICE_ID,
     CONF_EXTERNAL_URL,
-    CONF_PARAMS,
     CONF_TRIGGER_TIME,
 )
 from homeassistant.core import HomeAssistant
 
-from custom_components.wattpilot.const import CONF_CLOUD_API, DOMAIN
+from custom_components.wattpilot.const import CONF_CLOUD_API, CONF_PARAMS, DOMAIN
 from custom_components.wattpilot.services import (
     async_registerService,
     async_service_DisconnectCharger,

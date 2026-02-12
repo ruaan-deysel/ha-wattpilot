@@ -61,9 +61,14 @@ class TestWattpilotCoordinator:
             coord.hass = mock_hass
             coord.data = mock_charger.all_properties
             coord.last_update_success = True
-            coord.async_set_updated_data = MagicMock()
             coord._listeners = {}  # Required for async_update_listeners
             coord.async_update_listeners = MagicMock()  # Mock the listener update
+
+            def _set_updated_data(data):
+                coord.data = data
+                coord.async_update_listeners()
+
+            coord.async_set_updated_data = MagicMock(side_effect=_set_updated_data)
             yield coord
 
     def test_coordinator_init(

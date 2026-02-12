@@ -163,7 +163,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) ->
             entry.entry_id,
         )
 
-        async def _on_property_change(identifier: str, value: str) -> None:
+        async def _on_property_change(identifier: str, value: Any) -> None:
             await async_property_update_handler(hass, entry, identifier, value)
 
         unsub = charger.on_property_change(_on_property_change)
@@ -315,7 +315,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) -
 
 def _async_unregister_services(hass: HomeAssistant) -> None:
     """Unregister integration services when the last entry is unloaded."""
-    remaining = hass.config_entries.async_entries(DOMAIN)
+    remaining = hass.config_entries.async_loaded_entries(DOMAIN)
     if remaining:
         return
     _LOGGER.debug("%s - unregistering services (last entry unloaded)", DOMAIN)

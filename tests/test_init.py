@@ -342,7 +342,8 @@ class TestAsyncSetupEntry:
             pytest.raises(ConfigEntryNotReady),
         ):
             await async_setup_entry(hass, entry)
-            mock_disconnect_charger.assert_called_once()
+
+        mock_disconnect_charger.assert_called_once()
 
 
 class TestAsyncUnloadEntry:
@@ -590,7 +591,7 @@ class TestServiceManagement:
 
         # Mock remaining entries
         entry = MagicMock(spec=ConfigEntry)
-        hass.config_entries.async_entries = MagicMock(return_value=[entry])
+        hass.config_entries.async_loaded_entries = MagicMock(return_value=[entry])
 
         _async_unregister_services(hass)
 
@@ -607,7 +608,7 @@ class TestServiceManagement:
         from custom_components.wattpilot.const import DOMAIN
 
         # No remaining entries
-        hass.config_entries.async_entries = MagicMock(return_value=[])
+        hass.config_entries.async_loaded_entries = MagicMock(return_value=[])
         hass.services.has_service = MagicMock(return_value=True)
         hass.services.async_remove = MagicMock()
         hass.data[DOMAIN] = {"services_registered": True}

@@ -77,3 +77,44 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+
+  quality-scale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install PyYAML
+        run: python -m pip install --upgrade pip pyyaml
+
+      - name: Validate quality_scale.yaml
+        run: |
+          python3 << 'EOF'
+          import sys
+          import yaml
+
+          with open('custom_components/wattpilot/quality_scale.yaml', encoding='utf-8') as f:
+              quality_scale = yaml.safe_load(f)
+
+          if not isinstance(quality_scale, dict):
+              print('❌ quality_scale.yaml must contain a mapping at the top level')
+              sys.exit(1)
+
+          tier = quality_scale.get('tier')
+          rules = quality_scale.get('rules')
+
+          if tier is None:
+              print('❌ Missing tier in quality_scale.yaml')
+              sys.exit(1)
+
+          if rules is None:
+              print('❌ Missing rules in quality_scale.yaml')
+              sys.exit(1)
+
+          print(f'✅ quality_scale.yaml valid - tier: {tier} - rules: {len(rules) if isinstance(rules, dict) else "present"}')
+          EOF

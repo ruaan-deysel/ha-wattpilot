@@ -51,7 +51,7 @@ The project uses `uv` for dependency management with `pyproject.toml` as the sou
 **Data Flow**
 
 ```
-Wattpilot WebSocket (push) → PropertyUpdateHandler → Coordinator → CoordinatorEntity (sensors/switches/etc)
+Wattpilot WebSocket (push) → async_property_update_handler → Coordinator → CoordinatorEntity (sensors/switches/etc)
 ```
 
 **DataUpdateCoordinator (`coordinator.py`)**
@@ -64,7 +64,7 @@ Wattpilot WebSocket (push) → PropertyUpdateHandler → Coordinator → Coordin
 **Runtime Data (`types.py`)**
 
 - `WattpilotRuntimeData`: Stored in `entry.runtime_data` (modern Home Assistant pattern)
-  - `charger`: Wattpilot client instance (from vendored module)
+  - `charger`: Wattpilot client instance (from wattpilot-api)
   - `coordinator`: WattpilotCoordinator instance
   - `push_entities`: Dict of entities receiving property updates
   - `params`: Connection configuration
@@ -109,7 +109,7 @@ The `filter_descriptions()` helper filters entities by firmware version, device 
 
 ### External Wattpilot API Package
 
-The integration uses the external `wattpilot-api>=1.0.0` package (installed via `uv sync`). This package handles:
+The integration uses the external `wattpilot-api>=1.1.0` package (installed via `uv sync`). This package handles:
 
 - WebSocket connection management (local and cloud)
 - Property parsing and updates via `charger.all_properties` dict
@@ -158,7 +158,7 @@ unsub = charger.on_property_change(async_callback)  # Subscribe to updates
 - `icons.json`: Custom icons for entities
 - `quality_scale.yaml`: Home Assistant quality scale compliance checklist
 - `services.yaml`: Service definitions for Home Assistant
-- Platform YAML files: Entity definitions for each platform
+- `descriptions.py`: Dataclass entity descriptions (replaces per-platform YAML entity files)
 - `.pre-commit-config.yaml`: Pre-commit hooks configuration
 
 ## Services
@@ -169,7 +169,6 @@ The integration provides custom services defined in `services.py`:
 - `wattpilot.set_goe_cloud`: Set go-eCharger cloud settings
 - `wattpilot.disconnect_charger`: Manually disconnect
 - `wattpilot.reconnect_charger`: Manually reconnect
-- `wattpilot.set_debug_properties`: Enable debug property logging
 
 Services are registered once globally (not per config entry) and use `async_registerService` helper.
 
