@@ -143,7 +143,9 @@ class TestChargerPropertyAccess:
 
     def test_get_charger_prop_exception(self, mock_charger: MagicMock) -> None:
         """Test GetChargerProp handles exceptions."""
-        mock_charger.all_properties = MagicMock(side_effect=Exception("test"))
+        from unittest.mock import PropertyMock
+
+        type(mock_charger).all_properties = PropertyMock(side_effect=Exception("test"))
 
         result = GetChargerProp(mock_charger, "test", "default")
         assert result == "default"
@@ -199,7 +201,7 @@ class TestChargerPropertyAccess:
         self, mock_charger: MagicMock
     ) -> None:
         """Test async_GetChargerProp handles exceptions."""
-        mock_charger.all_properties = MagicMock(side_effect=Exception("test"))
+        mock_charger.all_properties = AsyncMock(side_effect=Exception("test"))
 
         result = await async_GetChargerProp(mock_charger, "test", "default")
         assert result == "default"

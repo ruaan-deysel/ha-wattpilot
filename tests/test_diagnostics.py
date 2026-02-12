@@ -105,10 +105,11 @@ class TestDiagnostics:
 
             # Check that password is redacted in config
             redacted_marker = "**REDACTED**"
-            if "config" in result and "data" in result["config"]:
-                data = result["config"]["data"]
-                if "password" in data:
-                    assert data["password"] == redacted_marker
+            assert "config" in result
+            assert "data" in result["config"]
+            data = result["config"]["data"]
+            assert "password" in data
+            assert data["password"] == redacted_marker
 
     @pytest.mark.asyncio
     async def test_diagnostics_contains_charger_properties(

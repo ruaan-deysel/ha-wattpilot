@@ -183,7 +183,9 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_FRIENDLY_NAME, DEFAULT_NAME
         )
         await self.async_set_unique_id(unique_id)
-        self._abort_if_unique_id_configured()
+        abort_result = self._abort_if_unique_id_configured()
+        if abort_result is not None:
+            return abort_result
 
         title = self.data.get(
             CONF_FRIENDLY_NAME, self.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)

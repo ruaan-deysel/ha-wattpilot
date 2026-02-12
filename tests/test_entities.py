@@ -184,10 +184,10 @@ class TestFilterHelpers:
         self, mock_charger: MagicMock
     ) -> None:
         """Test variant check is case insensitive."""
-        mock_charger.variant = "11"
+        mock_charger.variant = "AbC"
 
         result = check_variant_supported(
-            mock_charger, "11", "test_charger", "test_prop"
+            mock_charger, "aBc", "test_charger", "test_prop"
         )
         assert result is True
 
@@ -495,13 +495,10 @@ class TestChargerPlatformEntity:
             source=SOURCE_PROPERTY,
         )
 
-        with patch("custom_components.wattpilot.entities.GetChargerProp") as mock_get:
-            mock_get.return_value = None
-            entity = ChargerPlatformEntity(
-                mock_hass, mock_config_entry, desc, mock_charger
-            )
+        # No need to patch - GetChargerProp will return the sentinel when property missing
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
 
-            assert entity._init_failed is True
+        assert entity._init_failed is True
 
     @pytest.mark.asyncio
     async def test_entity_init_missing_attribute(
@@ -528,11 +525,15 @@ class TestChargerPlatformEntity:
     ) -> None:
         """Test entity initialization handles exceptions."""
         desc = MagicMock()
-        desc.charger_key = MagicMock(side_effect=Exception("test"))
+        # Use PropertyMock to raise exception on attribute access
+        type(desc).charger_key = PropertyMock(side_effect=Exception("test"))
 
         entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
 
         # Should handle exception gracefully
+        assert entity._init_failed is True
+        # Entity should not crash when accessing safe properties
+        _ = entity.available
 
     def test_entity_description_property(
         self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
@@ -589,11 +590,8 @@ class TestChargerPlatformEntity:
 
         entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
 
-        with patch.object(
-            ChargerPlatformEntity, "available", property(lambda self: True)
-        ):
-            # Should be available
-            pass
+        # Should be available
+        assert entity.available is True
 
     def test_entity_available_init_failed(
         self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
@@ -608,14 +606,11 @@ class TestChargerPlatformEntity:
             source=SOURCE_PROPERTY,
         )
 
-        with patch("custom_components.wattpilot.entities.GetChargerProp") as mock_get:
-            mock_get.return_value = None
-            entity = ChargerPlatformEntity(
-                mock_hass, mock_config_entry, desc, mock_charger
-            )
+        # No need to patch - GetChargerProp will return the sentinel when property missing
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
 
-            # Entity init failed, should be unavailable
-            assert entity._init_failed is True
+        # Entity init failed, should be unavailable
+        assert entity._init_failed is True
 
     def test_entity_available_disconnected(
         self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
@@ -748,6 +743,7 @@ class TestChargerPlatformEntity:
         )
 
         entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        entity.async_local_poll = AsyncMock()
 
         with patch(
             "custom_components.wattpilot.entities.CoordinatorEntity.enabled",
@@ -756,6 +752,7 @@ class TestChargerPlatformEntity:
         ):
             await entity.async_update()
         # Should return early without updating
+        entity.async_local_poll.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_entity_async_local_poll_property(

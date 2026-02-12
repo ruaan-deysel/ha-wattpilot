@@ -56,7 +56,8 @@ class TestInitVersionCheck:
             pytest.raises(ConfigEntryNotReady) as exc_info,
         ):
             await async_setup_entry(hass, entry)
-            assert "Failed to connect to charger" in str(exc_info.value)
+
+        assert "Failed to connect to charger" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_setup_entry_integration_version_none(
@@ -104,12 +105,10 @@ class TestInitVersionCheck:
                 "custom_components.wattpilot.utils.async_DisconnectCharger",
                 new_callable=AsyncMock,
             ),
+            pytest.raises(Exception),  # Expected to fail at later stage
         ):
-            # Should log debug message about unknown version but continue
-            try:
-                await async_setup_entry(hass, entry)
-            except Exception:
-                pass  # Expected to fail at later stage
+            # Should log debug message about unknown version
+            await async_setup_entry(hass, entry)
 
 
 class TestUnloadDisconnectErrors:
@@ -390,9 +389,9 @@ class TestEntitiesEdgeCases:
 
         entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
 
-        # Create a namespace object mock
+        # Create a namespace object mock with __str__ properly set
         namespace = MagicMock()
-        namespace.__str__ = lambda self: "namespace_test"
+        namespace.__str__ = MagicMock(return_value="namespace_test")
 
         result = await entity._async_update_validate_property(namespace)
         # Should return None because value_id is missing
@@ -870,7 +869,6 @@ class TestDiagnosticsErrorPaths:
             subentries_data={},
         )
 
-        coordinator = MagicMock()
         # Make charger access raise exception
         runtime_data = MagicMock()
         type(runtime_data).charger = PropertyMock(
@@ -991,7 +989,8 @@ class TestSensorValidation:
 
         # Pass a state not in enum
         result = await entity._async_update_validate_platform_state(99)
-        # Should log warning but not crash
+        # Method logs warning but returns the value as-is
+        assert result == 99
 
     @pytest.mark.asyncio
     async def test_sensor_validate_state_exception(

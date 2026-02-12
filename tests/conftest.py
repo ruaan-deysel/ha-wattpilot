@@ -127,7 +127,7 @@ def mock_coordinator(mock_hass: MagicMock, mock_charger: MagicMock) -> MagicMock
     coordinator.last_update_success = True
     coordinator.async_config_entry_first_refresh = AsyncMock()
     coordinator.async_set_updated_data = MagicMock()
-    coordinator.async_handle_property_update = MagicMock()
+    coordinator.async_handle_property_update = AsyncMock()
     return coordinator
 
 
@@ -186,10 +186,8 @@ def mock_charger() -> MagicMock:
 @pytest.fixture
 def mock_wattpilot_module() -> Generator[MagicMock]:
     """Mock the wattpilot_api module."""
-    mock_module = _create_mock_wattpilot_api_module()
-
-    with patch.dict("sys.modules", {"wattpilot_api": mock_module}):
-        yield mock_module
+    # Use the existing mock already injected into sys.modules
+    return _mock_wattpilot_api
 
 
 @pytest.fixture

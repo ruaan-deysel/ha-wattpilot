@@ -58,7 +58,6 @@ fixture-parentheses = false
     "PLC0415", # Import outside top-level (test fixtures)
     "ARG002", # Unused method argument (test fixtures)
     "ARG005", # Unused lambda argument (test fixtures)
-    "F841",   # Local variable assigned but never used (test assertions)
     "B017",   # Assert raises Exception (acceptable in tests)
     "PT011",  # pytest.raises too broad (acceptable in tests)
     "PT012",  # pytest.raises multiple statements (acceptable in tests)

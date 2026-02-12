@@ -14,12 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Comprehensive Test Suite**: Added 50 tests including coordinator tests, diagnostics tests, config flow tests, and sensor tests
 - **Test Infrastructure**: Created test fixtures with mock charger properties and expected entity states for reliable testing
 - **Diagnostics Platform**: Added diagnostics support with sensitive data redaction (passwords, WiFi credentials, serial numbers)
-- **Exception Translations**: Added user-friendly exception messages in English and German for charger unavailable, connection failed, and invalid property errors
+- **Exception Translations**: Removed old translation keys "connection_failed" and "invalid_property"; added new user-friendly exception messages in English and German for charger unavailable, connection failed, and invalid property errors
 - **Service Icons**: Added icons for all services (set_next_trip, set_goe_cloud, disconnect_charger, reconnect_charger)
 - **Type Annotations**: Added `py.typed` marker file for PEP 561 compliance indicating inline type annotations
 - **Pre-commit Hooks**: Configured pre-commit with ruff, codespell, yamllint, and prettier for code quality
 - **CI/CD Workflow**: Added continuous integration with pytest, coverage reporting, and Codecov integration
-- **Energy Dashboard Compatibility**: Fixed `SensorDeviceClass` enum conversion for proper Energy Dashboard integration
 - **UV Dependency Management**: Migrated from pip/Poetry to uv with PEP 621 pyproject.toml for faster dependency resolution
 - **UV Pre-commit Hook**: Added `uv-lock-check` hook to validate lock file synchronization
 - **Translation Enhancements**: Added missing `invalid_connection` abort reason and `update_failed`, `entry_cannot_connect` exception keys

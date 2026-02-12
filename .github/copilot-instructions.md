@@ -45,7 +45,7 @@ charger.properties_initialized  # Boolean - all properties loaded
 charger.name, charger.serial, charger.firmware  # Device identifiers
 
 # Callbacks (async-friendly)
-async def on_property_change(charger_id: str, value: Any) -> None:
+async def on_property_change(identifier: str, value: Any) -> None:
     ...
 
 unsub = charger.on_property_change(on_property_change)  # returns unsubscribe callable
@@ -66,6 +66,7 @@ from homeassistant.components.sensor import SensorEntityDescription
 from .descriptions import (
     WattpilotSensorEntityDescription,
     SENSOR_DESCRIPTIONS,
+    SOURCE_PROPERTY,
     filter_descriptions
 )
 

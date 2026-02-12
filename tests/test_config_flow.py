@@ -279,7 +279,7 @@ class TestConfigFlowUser:
             CONF_CONNECTION: CONF_LOCAL,
         }
         flow.async_set_unique_id = AsyncMock()
-        flow._abort_if_unique_id_configured = MagicMock()
+        flow._abort_if_unique_id_configured = MagicMock(return_value=None)
         flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
 
         result = await flow.async_step_final()
@@ -297,10 +297,10 @@ class TestConfigFlowUser:
             CONF_CONNECTION: CONF_CLOUD,
         }
         flow.async_set_unique_id = AsyncMock()
-        flow._abort_if_unique_id_configured = MagicMock()
+        flow._abort_if_unique_id_configured = MagicMock(return_value=None)
         flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
 
-        result = await flow.async_step_final()
+        await flow.async_step_final()
         flow.async_set_unique_id.assert_called_once_with("Test Wattpilot")
 
     @pytest.mark.asyncio
@@ -314,11 +314,12 @@ class TestConfigFlowUser:
         }
         flow.async_set_unique_id = AsyncMock()
         flow._abort_if_unique_id_configured = MagicMock(
-            side_effect=Exception("Already configured")
+            return_value={"type": "abort", "reason": "already_configured"}
         )
 
-        with pytest.raises(Exception):
-            await flow.async_step_final()
+        result = await flow.async_step_final()
+        assert result["type"] == "abort"
+        assert result["reason"] == "already_configured"
 
 
 class TestOptionsFlow:
@@ -363,8 +364,10 @@ class TestOptionsFlow:
     @pytest.mark.asyncio
     async def test_async_step_init_exception_handling(self) -> None:
         """Test init step handles exceptions."""
+        from unittest.mock import PropertyMock
+
         mock_config_entry = MagicMock()
-        mock_config_entry.source = MagicMock(side_effect=Exception("test"))
+        type(mock_config_entry).source = PropertyMock(side_effect=Exception("test"))
 
         with patch.object(OptionsFlowHandler, "config_entry", mock_config_entry):
             flow = OptionsFlowHandler()
@@ -583,7 +586,7 @@ class TestOptionsFlow:
                 "custom_components.wattpilot.config_flow.options_update_listener",
                 return_value=AsyncMock(),
             ) as mock_listener:
-                result = await flow.async_step_final()
+                await flow.async_step_final()
                 mock_listener.assert_called_once()
 
     @pytest.mark.asyncio

@@ -587,24 +587,25 @@ class TestServiceManagement:
         """Test services are not unregistered when entries remain."""
         from homeassistant.config_entries import ConfigEntry
 
-        from custom_components.wattpilot import _async_unregister_services
+        from custom_components.wattpilot import unregister_services
 
         # Mock remaining entries
         entry = MagicMock(spec=ConfigEntry)
         hass.config_entries.async_loaded_entries = MagicMock(return_value=[entry])
 
-        _async_unregister_services(hass)
+        unregister_services(hass)
 
         # Services should not be removed
-        hass.services.async_remove.assert_not_called() if hasattr(
-            hass.services, "async_remove"
-        ) else None
+        if hasattr(hass.services, "async_remove"):
+            hass.services.async_remove.assert_not_called()
+        else:
+            pytest.skip("hass.services.async_remove not available in this HA version")
 
     def test_unregister_services_with_no_remaining_entries(
         self, hass: HomeAssistant
     ) -> None:
         """Test services are unregistered when no entries remain."""
-        from custom_components.wattpilot import _async_unregister_services
+        from custom_components.wattpilot import unregister_services
         from custom_components.wattpilot.const import DOMAIN
 
         # No remaining entries
@@ -613,7 +614,7 @@ class TestServiceManagement:
         hass.services.async_remove = MagicMock()
         hass.data[DOMAIN] = {"services_registered": True}
 
-        _async_unregister_services(hass)
+        unregister_services(hass)
 
         # All services should be removed
         assert hass.services.async_remove.call_count == 4
@@ -666,7 +667,8 @@ class TestSetupErrorHandling:
             pytest.raises(ConfigEntryNotReady),
         ):
             await async_setup_entry(hass, entry)
-            mock_disconnect_charger.assert_called_once()
+
+        mock_disconnect_charger.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_setup_entry_integration_version_warning(
@@ -759,7 +761,8 @@ class TestSetupErrorHandling:
             pytest.raises(ConfigEntryNotReady),
         ):
             await async_setup_entry(hass, entry)
-            mock_disconnect_charger.assert_called_once()
+
+        mock_disconnect_charger.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_setup_entry_forward_platforms_exception(
@@ -805,7 +808,8 @@ class TestSetupErrorHandling:
             pytest.raises(ConfigEntryNotReady),
         ):
             await async_setup_entry(hass, entry)
-            mock_disconnect_charger.assert_called_once()
+
+        mock_disconnect_charger.assert_called_once()
 
 
 class TestUnloadErrorHandling:

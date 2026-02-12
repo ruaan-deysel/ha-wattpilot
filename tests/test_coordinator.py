@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from homeassistant.core import HomeAssistant
+
+from custom_components.wattpilot.coordinator import WattpilotCoordinator
 
 from .fixtures import get_charger_properties
 
@@ -159,25 +162,45 @@ class TestCoordinatorDataFlow:
         charger.all_properties = get_charger_properties()
         return charger
 
-    def test_data_contains_charger_properties(self, mock_charger: MagicMock) -> None:
+    @pytest.fixture
+    def mock_entry(self) -> MagicMock:
+        """Create a mock config entry."""
+        entry = MagicMock()
+        entry.entry_id = "test_entry_id"
+        entry.data = {}
+        return entry
+
+    def test_data_contains_charger_properties(
+        self, mock_hass: HomeAssistant, mock_charger: MagicMock, mock_entry: MagicMock
+    ) -> None:
         """Test that coordinator data contains charger properties."""
-        properties = mock_charger.all_properties
-        assert "amp" in properties
-        assert "eto" in properties
-        assert "car" in properties
-        assert "nrg" in properties
+        coordinator = WattpilotCoordinator(mock_hass, mock_charger, mock_entry)
+        coordinator.data = mock_charger.all_properties
 
-    def test_energy_values_in_data(self, mock_charger: MagicMock) -> None:
+        assert "amp" in coordinator.data
+        assert "eto" in coordinator.data
+        assert "car" in coordinator.data
+        assert "nrg" in coordinator.data
+
+    def test_energy_values_in_data(
+        self, mock_hass: HomeAssistant, mock_charger: MagicMock, mock_entry: MagicMock
+    ) -> None:
         """Test that energy values are present in data."""
-        properties = mock_charger.all_properties
-        assert properties["eto"] == 12345000  # Total energy in Wh
-        assert properties["wh"] == 1000  # Session energy in Wh
+        coordinator = WattpilotCoordinator(mock_hass, mock_charger, mock_entry)
+        coordinator.data = mock_charger.all_properties
 
-    def test_current_settings_in_data(self, mock_charger: MagicMock) -> None:
+        assert coordinator.data["eto"] == 12345000  # Total energy in Wh
+        assert coordinator.data["wh"] == 1000  # Session energy in Wh
+
+    def test_current_settings_in_data(
+        self, mock_hass: HomeAssistant, mock_charger: MagicMock, mock_entry: MagicMock
+    ) -> None:
         """Test that current settings are present in data."""
-        properties = mock_charger.all_properties
-        assert properties["amp"] == 6  # Requested current
-        assert properties["ama"] == 16  # Max current limit
+        coordinator = WattpilotCoordinator(mock_hass, mock_charger, mock_entry)
+        coordinator.data = mock_charger.all_properties
+
+        assert coordinator.data["amp"] == 6  # Requested current
+        assert coordinator.data["ama"] == 16  # Max current limit
 
 
 class TestCoordinatorAsync:
@@ -195,6 +218,7 @@ class TestCoordinatorAsync:
         """Create a mock config entry."""
         entry = MagicMock()
         entry.entry_id = "test_entry_id"
+        entry.data = {"friendly_name": "Test Wattpilot"}
         return entry
 
     @pytest.fixture

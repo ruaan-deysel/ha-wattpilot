@@ -10,7 +10,7 @@ from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 
 from .const import (
     CONF_CONNECTION,
@@ -52,19 +52,48 @@ def check_firmware_supported(
             identifier,
         )
         return False
-    if firmware_constraint[:2] == ">=":
-        result = Version(fw) >= Version(firmware_constraint[2:])
-    elif firmware_constraint[:2] == "<=":
-        result = Version(fw) <= Version(firmware_constraint[2:])
-    elif firmware_constraint[:2] == "==":
-        result = Version(fw) == Version(firmware_constraint[2:])
-    elif firmware_constraint[:1] == ">":
-        result = Version(fw) > Version(firmware_constraint[1:])
-    elif firmware_constraint[:1] == "<":
-        result = Version(fw) < Version(firmware_constraint[1:])
-    else:
+    try:
+        if firmware_constraint[:2] == ">=":
+            version_str = firmware_constraint[2:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) >= Version(version_str)
+        elif firmware_constraint[:2] == "<=":
+            version_str = firmware_constraint[2:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) <= Version(version_str)
+        elif firmware_constraint[:2] == "==":
+            version_str = firmware_constraint[2:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) == Version(version_str)
+        elif firmware_constraint[:1] == ">":
+            version_str = firmware_constraint[1:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) > Version(version_str)
+        elif firmware_constraint[:1] == "<":
+            version_str = firmware_constraint[1:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) < Version(version_str)
+        else:
+            _LOGGER.error(
+                "%s - %s: check_firmware_supported: Invalid firmware constraint: %s",
+                charger_id,
+                identifier,
+                firmware_constraint,
+            )
+            return False
+    except InvalidVersion:
         _LOGGER.error(
-            "%s - %s: check_firmware_supported: Invalid firmware constraint: %s",
+            "%s - %s: check_firmware_supported: Invalid version in constraint: %s",
             charger_id,
             identifier,
             firmware_constraint,
@@ -186,6 +215,9 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
         coordinator = entry.runtime_data.coordinator
         super().__init__(coordinator)
 
+        # Set _init_failed early so it's available even if exceptions occur
+        self._init_failed = True
+
         try:
             self._charger_id = str(getattr(charger, "serial", entry.entry_id))
             self._identifier = description.charger_key
@@ -201,8 +233,6 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
             self._entry = entry
             self.hass = hass
 
-            self._init_failed = True
-
             # Validate the charger actually has the property/attribute
             if self._source == SOURCE_ATTRIBUTE and not hasattr(
                 self._charger, self._identifier
@@ -214,18 +244,18 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                     self._identifier,
                 )
                 return
-            if (
-                self._source == SOURCE_PROPERTY
-                and GetChargerProp(self._charger, self._identifier, self._default_state)
-                is None
-            ):
-                _LOGGER.error(
-                    "%s - %s: __init__: Charger does not have property: %s (maybe an attribute?)",
-                    self._charger_id,
-                    self._identifier,
-                    self._identifier,
-                )
-                return
+            if self._source == SOURCE_PROPERTY:
+                # Use sentinel to detect missing properties (None might be a valid value)
+                sentinel = object()
+                prop_value = GetChargerProp(self._charger, self._identifier, sentinel)
+                if prop_value is sentinel:
+                    _LOGGER.error(
+                        "%s - %s: __init__: Charger does not have property: %s (maybe an attribute?)",
+                        self._charger_id,
+                        self._identifier,
+                        self._identifier,
+                    )
+                    return
             if self._source == SOURCE_NAMESPACELIST:
                 ns_val = GetChargerProp(
                     self._charger, self._identifier, self._default_state
@@ -277,8 +307,8 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: __init__ failed: %s (%s.%s)",
-                self._charger_id,
-                self._identifier,
+                getattr(self, "_charger_id", "unknown"),
+                getattr(self, "_identifier", "unknown"),
                 str(e),
                 e.__class__.__module__,
                 type(e).__name__,
@@ -301,32 +331,36 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
     @property
     def available(self) -> bool:
         """Return if device is available."""
+        # Use getattr for _charger_id and _identifier in case init failed early
+        charger_id = getattr(self, "_charger_id", "unknown")
+        identifier = getattr(self, "_identifier", "unknown")
+
         if not super().available:
             _LOGGER.debug(
                 "%s - %s: available: false because coordinator unavailable",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
-        if self._init_failed:
+        if getattr(self, "_init_failed", True):
             _LOGGER.debug(
                 "%s - %s: available: false because entity init not complete",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
         if not getattr(self._charger, "connected", True):
             _LOGGER.debug(
                 "%s - %s: available: false because charger disconnected",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
         if not getattr(self._charger, "properties_initialized", True):
             _LOGGER.debug(
                 "%s - %s: available: false because not all properties initialized",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
         if self._source == SOURCE_ATTRIBUTE and not hasattr(
@@ -334,8 +368,8 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
         ):
             _LOGGER.debug(
                 "%s - %s: available: false because unknown attribute",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
         if (
@@ -345,21 +379,29 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
         ):
             _LOGGER.debug(
                 "%s - %s: available: false because unknown property",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
         if self._source == SOURCE_NAMESPACELIST:
             ns_val = GetChargerProp(
                 self._charger, self._identifier, self._default_state
             )
+            # Treat non-list/tuple as unavailable
+            if not isinstance(ns_val, (list, tuple)):
+                _LOGGER.debug(
+                    "%s - %s: available: false because namespacelist is not a list/tuple: %s[%s]",
+                    charger_id,
+                    identifier,
+                    self._namespace_id,
+                    type(ns_val).__name__,
+                )
+                return False
             try:
                 ns_idx = int(self._namespace_id)
             except (TypeError, ValueError):
                 ns_idx = -1
-            if isinstance(ns_val, (list, tuple)) and (
-                ns_idx < 0 or ns_idx >= len(ns_val) or ns_val[ns_idx] is None
-            ):
+            if ns_idx < 0 or ns_idx >= len(ns_val) or ns_val[ns_idx] is None:
                 _LOGGER.debug(
                     "%s - %s: available: false because unknown namespacelist item: %s",
                     self._charger_id,
@@ -386,8 +428,10 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
         serial = getattr(self._charger, "serial", None)
         model = getattr(self._charger, "model", None)
         variant = getattr(self._charger, "variant", None)
+        # Use entry_id as fallback if serial is missing to avoid collisions
+        device_id = serial or self._entry.entry_id
         return DeviceInfo(
-            identifiers={(DOMAIN, serial)},
+            identifiers={(DOMAIN, device_id)},
             manufacturer=getattr(self._charger, "manufacturer", None),
             model=model,
             name=getattr(

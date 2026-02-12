@@ -125,6 +125,8 @@ class WattpilotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             all_props = getattr(self.charger, "all_properties", {})
             if all_props is None:
                 all_props = {}
+            # Reset failure counter on successful fetch
+            self._failed_update_count = 0
             return dict(all_props)
         except Exception as err:
             self._failed_update_count += 1

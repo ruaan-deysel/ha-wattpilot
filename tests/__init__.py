@@ -13,8 +13,12 @@ from custom_components.wattpilot.const import CONF_CONNECTION, CONF_LOCAL, DOMAI
 
 async def setup_wattpilot_integration(
     hass: HomeAssistant, mock_charger: MagicMock | None = None
-) -> ConfigEntry:
-    """Set up the Wattpilot integration."""
+) -> tuple[ConfigEntry, MagicMock]:
+    """
+    Set up the Wattpilot integration.
+
+    Returns tuple of (ConfigEntry, mock_charger) for test usage.
+    """
     if mock_charger is None:
         # Create a basic mock charger
         mock_charger = MagicMock()
@@ -38,4 +42,4 @@ async def setup_wattpilot_integration(
     }
     entry.unique_id = "12345678"
 
-    return entry
+    return entry, mock_charger

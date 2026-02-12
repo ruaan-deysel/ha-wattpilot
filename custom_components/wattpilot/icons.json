@@ -128,7 +128,7 @@
         "default": "mdi:restart"
       },
       "reboot_timer": {
-        "default": "mdi:av-time"
+        "default": "mdi:av-timer"
       },
       "session_energy": {
         "default": "mdi:ev-station"

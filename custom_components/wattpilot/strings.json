@@ -269,7 +269,7 @@
         "name": "Load Balancing"
       },
       "led_energy_saving": {
-        "name": "LED EnergySaving"
+        "name": "LED Energy Saving"
       },
       "ground_check": {
         "name": "Ground Check"
@@ -298,19 +298,19 @@
         "name": "Max Price"
       },
       "boost_discharges_until": {
-        "name": "Boost discharges until"
+        "name": "Boost Discharges Until"
       },
       "pv_battery_threshold": {
-        "name": "PV Battery threshold"
+        "name": "PV Battery Threshold"
       },
       "min_charging_time": {
         "name": "Min Charging Time"
       },
       "ohmpilot_threshold": {
-        "name": "Ohmpilot threshold"
+        "name": "Ohmpilot Threshold"
       },
       "start_charging_at": {
-        "name": "Start Charging at"
+        "name": "Start Charging At"
       },
       "next_trip_charging": {
         "name": "Next Trip Charging"
@@ -322,7 +322,7 @@
         "name": "Phase Switch Interval"
       },
       "pv_battery_discharges_until": {
-        "name": "PV Battery discharges until"
+        "name": "PV Battery Discharges Until"
       },
       "three_phase_power_level": {
         "name": "Three Phase Power Level"
@@ -336,10 +336,10 @@
         "name": "Awattar Country"
       },
       "lock_level_selection": {
-        "name": "Lock level selection"
+        "name": "Lock Level Selection"
       },
       "boost_type": {
-        "name": "Boost type"
+        "name": "Boost Type"
       },
       "charging_mode": {
         "name": "Charging Mode"
@@ -351,7 +351,7 @@
         "name": "Daylight Saving"
       },
       "cable_unlock_select": {
-        "name": "Cable unlock"
+        "name": "Cable Unlock"
       }
     },
     "button": {

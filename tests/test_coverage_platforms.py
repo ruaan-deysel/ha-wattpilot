@@ -61,9 +61,11 @@ class TestSelectValidation:
 
         entity = ChargerSelect(mock_hass, mock_config_entry, desc, mock_charger)
 
-        # Should return None when value not found in reverse lookup
+        # Should return STATE_UNKNOWN when value not found in reverse lookup
         option = entity.current_option
-        # The reverse lookup should fail and return None or the original value
+        from homeassistant.const import STATE_UNKNOWN
+
+        assert option == STATE_UNKNOWN
 
 
 class TestUpdateVersionParsing:
@@ -119,6 +121,7 @@ class TestUpdateVersionParsing:
 
         result = entity._get_versions_dict(release_info)
         # Should handle gracefully and may skip invalid versions
+        assert result == {}
 
     @pytest.mark.asyncio
     async def test_update_get_versions_dict_missing_keys(
@@ -145,6 +148,7 @@ class TestUpdateVersionParsing:
 
         result = entity._get_versions_dict(release_info)
         # Should handle gracefully
+        assert result == {} or "test" not in result
 
     @pytest.mark.asyncio
     async def test_update_get_versions_dict_exception_handling(
@@ -164,9 +168,10 @@ class TestUpdateVersionParsing:
 
         entity = ChargerUpdate(mock_hass, mock_config_entry, desc, mock_charger)
 
-        # Test with data that causes exception (e.g., dict instead of list)
-        result = entity._get_versions_dict({"invalid": "data"})
+        # Test with data that causes exception (e.g., None instead of list)
+        result = entity._get_versions_dict(None)  # type: ignore[arg-type]
         # Should return empty dict on exception
+        assert result == {}
 
     @pytest.mark.asyncio
     async def test_update_get_versions_dict_sorting_edge_case(
@@ -195,7 +200,12 @@ class TestUpdateVersionParsing:
         ]
 
         result = entity._get_versions_dict(release_info)
-        # Should handle different version formats
+        # Should handle different version formats and preserve metadata
+        assert isinstance(result, dict)
+        # Verify sorting and metadata preservation
+        if "41.0.0" in result:
+            assert result["41.0.0"]["age"] == 25
+            assert result["41.0.0"]["branch"] == "stable"
 
     @pytest.mark.asyncio
     async def test_update_installed_version_none(
@@ -221,6 +231,7 @@ class TestUpdateVersionParsing:
         # installed_version should handle missing firmware
         version = entity.installed_version
         # Should return None or a default value
+        assert version is None
 
 
 class TestUtilsEdgeCases:
@@ -506,6 +517,7 @@ class TestUpdateEntityEdgeCases:
         # Should handle missing release info
         version = entity.latest_version
         # Should return None or current version
+        assert version is None or version == entity.installed_version
 
     @pytest.mark.asyncio
     async def test_update_supported_features(
@@ -532,6 +544,9 @@ class TestUpdateEntityEdgeCases:
         # Check supported_features property
         features = entity.supported_features
         # Should return expected UpdateEntityFeature flags
+        from homeassistant.components.update import UpdateEntityFeature
+
+        assert isinstance(features, (int, UpdateEntityFeature))
 
 
 class TestDiagnosticsChargerNotAvailable:

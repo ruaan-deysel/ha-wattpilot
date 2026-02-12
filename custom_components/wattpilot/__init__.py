@@ -297,8 +297,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) -
                     charger.serial,
                 )
 
-            # Unregister services if this was the last entry
-            _async_unregister_services(hass)
+            # Unregister services if this is the last entry
+            unregister_services(hass)
 
         return unload_ok
 
@@ -313,10 +313,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: WattpilotConfigEntry) -
         return False
 
 
-def _async_unregister_services(hass: HomeAssistant) -> None:
+def unregister_services(hass: HomeAssistant) -> None:
     """Unregister integration services when the last entry is unloaded."""
     remaining = hass.config_entries.async_loaded_entries(DOMAIN)
-    if remaining:
+    if len(remaining) > 1:
         return
     _LOGGER.debug("%s - unregistering services (last entry unloaded)", DOMAIN)
     for service_name in (

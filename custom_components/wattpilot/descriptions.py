@@ -100,7 +100,7 @@ SENSOR_DESCRIPTIONS: list[WattpilotSensorEntityDescription] = [
         charger_key="car_connected",
         source=SOURCE_ATTRIBUTE,
         translation_key="car_connected",
-        description_text="State of the car plug - values are: 'no car', 'charging', 'ready','complete'",
+        description_text="State of the car plug - values are: 'no car', 'charging', 'ready', 'complete'",
     ),
     # --- Namespace list sensors (ID chips/cards) ---
     *[
@@ -375,7 +375,7 @@ SENSOR_DESCRIPTIONS: list[WattpilotSensorEntityDescription] = [
         charger_key="tma",
         translation_key="charger_temp",
         device_class=SensorDeviceClass.TEMPERATURE,
-        default_state=999,
+        default_state=None,
         native_unit_of_measurement="°C",
         entity_category=EntityCategory.DIAGNOSTIC,
         description_text="Temperature of the controller",
@@ -628,7 +628,7 @@ NUMBER_DESCRIPTIONS: list[WattpilotNumberEntityDescription] = [
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.MONETARY,
         native_unit_of_measurement="EUR",
-        description_text="Lumina Strom/aWattar maximum price in euro cent",
+        description_text="Lumina Strom/aWattar maximum price in EUR",
     ),
     WattpilotNumberEntityDescription(
         key="boost_discharges_until",
@@ -810,7 +810,7 @@ SELECT_DESCRIPTIONS: list[WattpilotSelectEntityDescription] = [
             10006: "Greece",
             10042: "Hungary",
             10017: "Italy Calabria",
-            10031: "Italy Centre-Noth",
+            10031: "Italy Centre-North",
             10009: "Italy Centre-South",
             10034: "Italy North",
             10023: "Italy SacoAC",
