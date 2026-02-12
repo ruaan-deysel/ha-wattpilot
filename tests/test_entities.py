@@ -878,3 +878,108 @@ class TestChargerPlatformEntity:
         ):
             await entity.async_local_push("pushed_value")
             entity.async_write_ha_state.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_loads_initial_state(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test that async_added_to_hass loads initial state from coordinator data."""
+        mock_charger.all_properties = {"test_prop": "initial_value"}
+
+        desc = WattpilotSensorEntityDescription(
+            key="test",
+            charger_key="test_prop",
+            name="Test",
+            source=SOURCE_PROPERTY,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        entity.coordinator.data = {"test_prop": "initial_value"}
+        entity.async_on_remove = MagicMock()
+        entity.async_local_push = AsyncMock()
+
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity.async_added_to_hass",
+            new_callable=AsyncMock,
+        ):
+            await entity.async_added_to_hass()
+            entity.async_local_push.assert_called_once_with("initial_value")
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_skips_when_init_failed(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test that async_added_to_hass skips loading when init failed."""
+        mock_charger.all_properties = {}
+
+        desc = WattpilotSensorEntityDescription(
+            key="test",
+            charger_key="missing_prop",
+            name="Test",
+            source=SOURCE_PROPERTY,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        entity.async_on_remove = MagicMock()
+        entity.async_local_push = AsyncMock()
+        assert entity._init_failed is True
+
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity.async_added_to_hass",
+            new_callable=AsyncMock,
+        ):
+            await entity.async_added_to_hass()
+            entity.async_local_push.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_skips_when_no_coordinator_data(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test that async_added_to_hass skips when coordinator data is None."""
+        mock_charger.all_properties = {"test_prop": "value"}
+
+        desc = WattpilotSensorEntityDescription(
+            key="test",
+            charger_key="test_prop",
+            name="Test",
+            source=SOURCE_PROPERTY,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        entity.async_on_remove = MagicMock()
+        entity.async_local_push = AsyncMock()
+        entity.coordinator.data = None
+
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity.async_added_to_hass",
+            new_callable=AsyncMock,
+        ):
+            await entity.async_added_to_hass()
+            entity.async_local_push.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_skips_when_property_not_in_data(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test that async_added_to_hass skips when property is not in coordinator data."""
+        mock_charger.all_properties = {"other_prop": "value"}
+
+        desc = WattpilotSensorEntityDescription(
+            key="test",
+            charger_key="other_prop",
+            name="Test",
+            source=SOURCE_PROPERTY,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        entity.async_on_remove = MagicMock()
+        entity.async_local_push = AsyncMock()
+        # Set coordinator data to not include this entity's property
+        entity.coordinator.data = {"different_prop": "something"}
+
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity.async_added_to_hass",
+            new_callable=AsyncMock,
+        ):
+            await entity.async_added_to_hass()
+            entity.async_local_push.assert_not_called()

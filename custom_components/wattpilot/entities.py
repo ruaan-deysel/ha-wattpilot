@@ -326,6 +326,25 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
 
+    async def async_added_to_hass(self) -> None:
+        """
+        Load initial state from coordinator data when entity is added to HA.
+
+        Without this, entities for rarely-changing properties (e.g. err, cus)
+        stay "Unknown" until the charger pushes a property change event.
+        """
+        await super().async_added_to_hass()
+        if self._init_failed or self.coordinator.data is None:
+            return
+        value = self.coordinator.data.get(self._identifier)
+        if value is not None:
+            _LOGGER.debug(
+                "%s - %s: async_added_to_hass: loading initial state",
+                self._charger_id,
+                self._identifier,
+            )
+            await self.async_local_push(value)
+
     @property
     def description(self) -> str | None:
         """Return the description of the entity."""
