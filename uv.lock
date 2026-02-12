@@ -1150,7 +1150,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "packaging", specifier = ">=24.0" },
-    { name = "wattpilot-api", specifier = ">=1.1.0" },
+    { name = "wattpilot-api", specifier = ">=1.2.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -2953,18 +2953,19 @@ wheels = [
 
 [[package]]
 name = "wattpilot-api"
-version = "1.1.0"
+version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiomqtt" },
     { name = "bcrypt" },
     { name = "prompt-toolkit" },
+    { name = "pydantic" },
     { name = "pyyaml" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9a/64/441715396ae5ed17fe477858e047533c700a92b57b363e4a6bf0a791f29e/wattpilot_api-1.1.0.tar.gz", hash = "sha256:b498d6130980b22e21605c2e7b8eea4faa2ddec94678840f8e75a7b8206b9cdc", size = 40793, upload-time = "2026-02-11T04:59:07.977Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/64/b5a550774257affeae6c028f44a739e2b1e30ba180a838e6f3f2a545ab83/wattpilot_api-1.2.0.tar.gz", hash = "sha256:4cca5b9f6788c8cd547def9ff8c04dc3427a9be4f43dacd211c55b8ac8d2aeef", size = 41151, upload-time = "2026-02-12T10:03:23.675Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/fd/9f009504e503f44d3ba8ea6cea2d5c950b6f4f88ac4c6dcf475eaa51860b/wattpilot_api-1.1.0-py3-none-any.whl", hash = "sha256:68ba752b83f797a3d5b8fb231715c3dd793fed122768bb630d562c581f2f05f1", size = 46126, upload-time = "2026-02-11T04:59:06.379Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/ff/7b510fe72ed68653c9d4c57427df49be01ef169c805ae1ec48fa43c16329/wattpilot_api-1.2.0-py3-none-any.whl", hash = "sha256:049d52eba87d046d2e21400f2ccdbedf548acae018379895d222a5217b929412", size = 46468, upload-time = "2026-02-12T10:03:22.432Z" },
 ]
 
 [[package]]
