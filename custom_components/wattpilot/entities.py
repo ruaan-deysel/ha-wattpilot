@@ -194,6 +194,16 @@ def filter_descriptions[T: WattpilotDescriptionMixin](
                 desc.connection,
             )
             continue
+        # Skip entities whose charger property doesn't exist on this device
+        if desc.source == SOURCE_PROPERTY:
+            sentinel = object()
+            if GetChargerProp(charger, identifier, sentinel) is sentinel:
+                _LOGGER.debug(
+                    "%s - %s: Skipped (property not available on charger)",
+                    charger_id,
+                    identifier,
+                )
+                continue
         result.append(desc)
     return result
 
@@ -249,7 +259,7 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                 sentinel = object()
                 prop_value = GetChargerProp(self._charger, self._identifier, sentinel)
                 if prop_value is sentinel:
-                    _LOGGER.warning(
+                    _LOGGER.debug(
                         "%s - %s: __init__: Charger does not have property: %s (maybe an attribute?)",
                         self._charger_id,
                         self._identifier,

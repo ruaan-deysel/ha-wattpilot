@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Availability Handling**: Entities now properly check coordinator availability before reporting their own status
 - **Error Logging**: Improved logging when charger becomes unavailable with translation support
 - **Missing Property Log Level**: Changed missing charger property log from ERROR to WARNING for optional properties that may not exist on all charger variants
+- **Entity Filtering for Missing Properties**: Added property-existence check to `filter_descriptions()` — entities with `source=SOURCE_PROPERTY` whose charger property doesn't exist are now filtered out before entity creation, eliminating spurious log warnings (e.g., `trx` on chargers without NFC chip support)
 - **Translation Formatting**: Fixed corrupted escaped quotes in German translations (de.json)
 - **Code Quality**: Replaced unnecessary lambda wrapper in test fixtures (ruff PLW0108)
 - **Test Fixture**: Fixed `test_select_current_option_reverse_lookup_fails` to use `select_options=` (correct field) instead of `options=`

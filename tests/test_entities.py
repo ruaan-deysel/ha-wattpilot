@@ -12,6 +12,7 @@ from custom_components.wattpilot.const import CONF_CONNECTION, CONF_LOCAL, DOMAI
 from custom_components.wattpilot.descriptions import (
     SOURCE_ATTRIBUTE,
     SOURCE_NAMESPACELIST,
+    SOURCE_NONE,
     SOURCE_PROPERTY,
     WattpilotSensorEntityDescription,
 )
@@ -270,6 +271,8 @@ class TestFilterDescriptions:
         self, mock_charger: MagicMock, mock_config_entry: Any
     ) -> None:
         """Test filtering with no constraints."""
+        mock_charger.all_properties["prop1"] = "val1"
+        mock_charger.all_properties["prop2"] = "val2"
         desc1 = WattpilotSensorEntityDescription(
             key="test1",
             charger_key="prop1",
@@ -294,6 +297,8 @@ class TestFilterDescriptions:
     ) -> None:
         """Test filtering with firmware constraint."""
         mock_charger.firmware = "40.7"
+        mock_charger.all_properties["prop1"] = "val1"
+        mock_charger.all_properties["prop2"] = "val2"
 
         desc_pass = WattpilotSensorEntityDescription(
             key="test1",
@@ -322,6 +327,8 @@ class TestFilterDescriptions:
     ) -> None:
         """Test filtering with variant constraint."""
         mock_charger.variant = "11"
+        mock_charger.all_properties["prop1"] = "val1"
+        mock_charger.all_properties["prop2"] = "val2"
 
         desc_pass = WattpilotSensorEntityDescription(
             key="test1",
@@ -349,6 +356,8 @@ class TestFilterDescriptions:
         self, mock_charger: MagicMock, mock_config_entry: Any
     ) -> None:
         """Test filtering with connection constraint."""
+        mock_charger.all_properties["prop1"] = "val1"
+        mock_charger.all_properties["prop2"] = "val2"
         # Already set via fixture
         mock_config_entry.runtime_data.params[CONF_CONNECTION] = CONF_LOCAL
 
@@ -380,6 +389,9 @@ class TestFilterDescriptions:
         """Test filtering with multiple constraints."""
         mock_charger.firmware = "40.7"
         mock_charger.variant = "11"
+        mock_charger.all_properties["prop1"] = "val1"
+        mock_charger.all_properties["prop2"] = "val2"
+        mock_charger.all_properties["prop3"] = "val3"
         # Already set via fixture
         mock_config_entry.runtime_data.params[CONF_CONNECTION] = CONF_LOCAL
 
@@ -417,6 +429,43 @@ class TestFilterDescriptions:
         )
         assert len(result) == 1
         assert result[0].key == "test1"
+
+    def test_filter_descriptions_missing_property(
+        self, mock_charger: MagicMock, mock_config_entry: Any
+    ) -> None:
+        """Test filtering skips entities whose charger property is missing."""
+        mock_charger.all_properties["prop_exists"] = "value"
+        # "prop_missing" is NOT in all_properties
+
+        desc_pass = WattpilotSensorEntityDescription(
+            key="test1",
+            charger_key="prop_exists",
+            name="Test 1",
+            source=SOURCE_PROPERTY,
+        )
+        desc_fail = WattpilotSensorEntityDescription(
+            key="test2",
+            charger_key="prop_missing",
+            name="Test 2",
+            source=SOURCE_PROPERTY,
+        )
+        desc_none_source = WattpilotSensorEntityDescription(
+            key="test3",
+            charger_key="prop_also_missing",
+            name="Test 3",
+            source=SOURCE_NONE,
+        )
+        descriptions = [desc_pass, desc_fail, desc_none_source]
+
+        result = filter_descriptions(
+            descriptions, mock_charger, mock_config_entry, "test_charger"
+        )
+        # desc_pass: property exists -> included
+        # desc_fail: SOURCE_PROPERTY but property missing -> excluded
+        # desc_none_source: SOURCE_NONE so property check skipped -> included
+        assert len(result) == 2
+        assert result[0].key == "test1"
+        assert result[1].key == "test3"
 
 
 class TestChargerPlatformEntity:
