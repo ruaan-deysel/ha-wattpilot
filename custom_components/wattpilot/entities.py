@@ -6,21 +6,21 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
-from homeassistant.const import (
-    CONF_FRIENDLY_NAME,
-    CONF_IP_ADDRESS,
-    STATE_UNKNOWN,
-    EntityCategory,
-)
+from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from packaging.version import Version
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from packaging.version import InvalidVersion, Version
 
 from .const import (
     CONF_CONNECTION,
-    DEFAULT_NAME,
     DOMAIN,
+)
+from .descriptions import (
+    SOURCE_ATTRIBUTE,
+    SOURCE_NAMESPACELIST,
+    SOURCE_PROPERTY,
+    WattpilotDescriptionMixin,
 )
 from .utils import (
     GetChargerProp,
@@ -32,8 +32,183 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 1
 
-class ChargerPlatformEntity(Entity):
+
+def check_firmware_supported(
+    charger: Any,
+    firmware_constraint: str | None,
+    charger_id: str,
+    identifier: str,
+) -> bool:
+    """Return whether the current charger firmware satisfies the constraint."""
+    if firmware_constraint is None:
+        return True
+    fw = getattr(charger, "firmware", GetChargerProp(charger, "onv", None))
+    if fw is None:
+        _LOGGER.error(
+            "%s - %s: check_firmware_supported: Cannot identify charger firmware",
+            charger_id,
+            identifier,
+        )
+        return False
+    try:
+        if firmware_constraint[:2] == ">=":
+            version_str = firmware_constraint[2:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) >= Version(version_str)
+        elif firmware_constraint[:2] == "<=":
+            version_str = firmware_constraint[2:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) <= Version(version_str)
+        elif firmware_constraint[:2] == "==":
+            version_str = firmware_constraint[2:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) == Version(version_str)
+        elif firmware_constraint[:1] == ">":
+            version_str = firmware_constraint[1:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) > Version(version_str)
+        elif firmware_constraint[:1] == "<":
+            version_str = firmware_constraint[1:]
+            if not version_str:
+                msg = "Empty version string"
+                raise InvalidVersion(msg)
+            result = Version(fw) < Version(version_str)
+        else:
+            _LOGGER.error(
+                "%s - %s: check_firmware_supported: Invalid firmware constraint: %s",
+                charger_id,
+                identifier,
+                firmware_constraint,
+            )
+            return False
+    except InvalidVersion:
+        _LOGGER.error(
+            "%s - %s: check_firmware_supported: Invalid version in constraint: %s",
+            charger_id,
+            identifier,
+            firmware_constraint,
+        )
+        return False
+    _LOGGER.debug(
+        "%s - %s: check_firmware_supported (%s%s -> %s)",
+        charger_id,
+        identifier,
+        fw,
+        firmware_constraint,
+        result,
+    )
+    return result
+
+
+def check_variant_supported(
+    charger: Any,
+    variant_filter: str | None,
+    charger_id: str,
+    identifier: str,
+) -> bool:
+    """Return whether the current charger variant matches the filter."""
+    if variant_filter is None:
+        return True
+    variant = getattr(charger, "variant", GetChargerProp(charger, "var", 11))
+    result = str(variant).upper() == str(variant_filter).upper()
+    _LOGGER.debug(
+        "%s - %s: check_variant_supported (%s=%s -> %s)",
+        charger_id,
+        identifier,
+        variant,
+        variant_filter,
+        result,
+    )
+    return result
+
+
+def check_connection_supported(
+    entry: WattpilotConfigEntry,
+    connection_filter: str | None,
+    charger_id: str,
+    identifier: str,
+) -> bool:
+    """Return whether the current connection type matches the filter."""
+    if connection_filter is None:
+        return True
+    runtime_data = getattr(entry, "runtime_data", None)
+    if runtime_data is None:
+        return True
+    config_params = runtime_data.params or {}
+    connection = config_params.get(CONF_CONNECTION, STATE_UNKNOWN)
+    result = str(connection).upper() == str(connection_filter).upper()
+    _LOGGER.debug(
+        "%s - %s: check_connection_supported (%s=%s -> %s)",
+        charger_id,
+        identifier,
+        connection,
+        connection_filter,
+        result,
+    )
+    return result
+
+
+def filter_descriptions[T: WattpilotDescriptionMixin](
+    descriptions: list[T],
+    charger: Any,
+    entry: WattpilotConfigEntry,
+    charger_id: str,
+) -> list[T]:
+    """Filter entity descriptions by firmware, variant and connection constraints."""
+    result: list[T] = []
+    for desc in descriptions:
+        identifier = desc.charger_key
+        if not check_firmware_supported(charger, desc.firmware, charger_id, identifier):
+            _LOGGER.debug(
+                "%s - %s: Skipped (firmware constraint: %s)",
+                charger_id,
+                identifier,
+                desc.firmware,
+            )
+            continue
+        if not check_variant_supported(charger, desc.variant, charger_id, identifier):
+            _LOGGER.debug(
+                "%s - %s: Skipped (variant filter: %s)",
+                charger_id,
+                identifier,
+                desc.variant,
+            )
+            continue
+        if not check_connection_supported(
+            entry, desc.connection, charger_id, identifier
+        ):
+            _LOGGER.debug(
+                "%s - %s: Skipped (connection filter: %s)",
+                charger_id,
+                identifier,
+                desc.connection,
+            )
+            continue
+        # Skip entities whose charger property doesn't exist on this device
+        if desc.source == SOURCE_PROPERTY:
+            sentinel = object()
+            if GetChargerProp(charger, identifier, sentinel) is sentinel:
+                _LOGGER.debug(
+                    "%s - %s: Skipped (property not available on charger)",
+                    charger_id,
+                    identifier,
+                )
+                continue
+        result.append(desc)
+    return result
+
+
+class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
     """Base class for Fronius Wattpilot integration."""
 
     _attr_has_entity_name = True
@@ -43,114 +218,105 @@ class ChargerPlatformEntity(Entity):
         self,
         hass: HomeAssistant,
         entry: WattpilotConfigEntry,
-        entity_cfg: dict[str, Any],
+        description: WattpilotDescriptionMixin,
         charger: Any,
     ) -> None:
         """Initialize the object."""
+        coordinator = entry.runtime_data.coordinator
+        super().__init__(coordinator)
+
+        # Set _init_failed early so it's available even if exceptions occur
+        self._init_failed = True
+
         try:
-            self._charger_id = str(
-                entry.data.get(
-                    CONF_FRIENDLY_NAME, entry.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
-                )
-            )
-            self._identifier = str(entity_cfg.get("id")).split("_")[0]
+            self._charger_id = str(getattr(charger, "serial", entry.entry_id))
+            self._identifier = description.charger_key
             _LOGGER.debug("%s - %s: __init__", self._charger_id, self._identifier)
 
             self._charger = charger
-            self._source = entity_cfg.get("source", "property")
-            self._namespace_id = int(entity_cfg.get("namespace_id", 0))
-            self._default_state = entity_cfg.get("default_state")
-            self._entity_cfg = entity_cfg
+            self._source = description.source
+            self._namespace_id = description.namespace_id
+            self._default_state = description.default_state
+            self._set_type = description.set_type
+            self.entity_description = description  # type: ignore[assignment]
 
             self._entry = entry
             self.hass = hass
 
-            self._init_failed = True
-            self._fw_supported = self._check_firmware_supported()
-            if self._fw_supported is not True:
+            # Validate the charger actually has the property/attribute
+            if self._source == SOURCE_ATTRIBUTE and not hasattr(
+                self._charger, self._identifier
+            ):
+                _LOGGER.error(
+                    "%s - %s: __init__: Charger does not have attribute: %s (maybe a property?)",
+                    self._charger_id,
+                    self._identifier,
+                    self._identifier,
+                )
                 return
-            self._variant_supported = self._check_variant_supported()
-            if self._variant_supported is not True:
-                return
-            self._connection_supported = self._check_connection_supported()
-            if self._connection_supported is not True:
-                return
-
-            self._init_failed = False
-            if self._fw_supported is not False:
-                if self._source == "attribute" and not hasattr(
-                    self._charger, self._identifier
-                ):
-                    _LOGGER.error(
-                        "%s - %s: __init__: Charger does not have an attribute: %s (maybe a property?)",
+            if self._source == SOURCE_PROPERTY:
+                # Use sentinel to detect missing properties (None might be a valid value)
+                sentinel = object()
+                prop_value = GetChargerProp(self._charger, self._identifier, sentinel)
+                if prop_value is sentinel:
+                    _LOGGER.debug(
+                        "%s - %s: __init__: Charger does not have property: %s (maybe an attribute?)",
                         self._charger_id,
                         self._identifier,
                         self._identifier,
                     )
-                    self._init_failed = True
-                elif (
-                    self._source == "property"
-                    and GetChargerProp(
-                        self._charger, self._identifier, self._default_state
-                    )
-                    is None
-                ):
+                    return
+            if self._source == SOURCE_NAMESPACELIST:
+                ns_val = GetChargerProp(
+                    self._charger, self._identifier, self._default_state
+                )
+                try:
+                    ns_idx = int(self._namespace_id)
+                except (TypeError, ValueError):
                     _LOGGER.error(
-                        "%s - %s: __init__: Charger does not have a property: %s (maybe an attribute?)",
-                        self._charger_id,
-                        self._identifier,
-                        self._identifier,
-                    )
-                    self._init_failed = True
-                elif (
-                    self._source == "namespacelist"
-                    and GetChargerProp(
-                        self._charger, self._identifier, self._default_state
-                    )[int(self._namespace_id)]
-                    is None
-                ):
-                    _LOGGER.error(
-                        "%s - %s: __init__: Charger does not have a namespacelist item: %s[%s]",
+                        "%s - %s: __init__: Invalid namespacelist index: %s[%s]",
                         self._charger_id,
                         self._identifier,
                         self._identifier,
                         self._namespace_id,
                     )
-                    self._init_failed = True
-            if self._init_failed:
-                return
+                    return
+                if (
+                    not isinstance(ns_val, (list, tuple))
+                    or ns_idx < 0
+                    or ns_idx >= len(ns_val)
+                    or ns_val[ns_idx] is None
+                ):
+                    _LOGGER.error(
+                        "%s - %s: __init__: Charger does not have namespacelist item: %s[%s]",
+                        self._charger_id,
+                        self._identifier,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    return
 
-            # With has_entity_name=True, _attr_name is the entity suffix (device name is prepended)
-            self._attr_name = self._entity_cfg.get("name", self._entity_cfg.get("id"))
-            self._attr_icon = self._entity_cfg.get("icon", None)
-            self._attr_device_class = self._entity_cfg.get("device_class", None)
-            self._entity_category = self._entity_cfg.get("entity_category", None)
-            self._set_type = self._entity_cfg.get("set_type", None)
+            self._init_failed = False
 
             self._attributes: dict[str, Any] = {}
-            self._attributes["description"] = self._entity_cfg.get("description", None)
+            self._attributes["description"] = description.description_text
             setattr(
                 self,
                 self._state_attr,
-                self._entity_cfg.get("default_state", STATE_UNKNOWN),
+                description.default_state,
             )
 
             self._init_platform_specific()
 
-            self._attr_unique_id = (
-                self._charger_id
-                + "-"
-                + self._entity_cfg.get(
-                    "uid", self._entity_cfg.get("id", self._identifier)
-                )
-            )
+            uid = description.uid or description.charger_key
+            self._attr_unique_id = f"{self._charger_id}-{uid}"
             if self._init_failed:
                 return
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: __init__ failed: %s (%s.%s)",
-                self._charger_id,
-                self._identifier,
+                getattr(self, "_charger_id", "unknown"),
+                getattr(self, "_identifier", "unknown"),
                 str(e),
                 e.__class__.__module__,
                 type(e).__name__,
@@ -159,102 +325,30 @@ class ChargerPlatformEntity(Entity):
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
-        # Do nothing here as this is only a drop-in option for other platforms
-        # Do not put actions in a try / except block - exceptions should be covered by __init__
 
-    def _check_firmware_supported(self) -> bool:
-        """Return if the current charger firmware supports this entity."""
-        fw_tst = self._entity_cfg.get("firmware", None)
-        if fw_tst is None:
-            return True
-        fw = getattr(
-            self._charger, "firmware", GetChargerProp(self._charger, "onv", None)
-        )
-        if fw is None:
-            _LOGGER.error(
-                "%s - %s: _check_firmware_supported: Cannot identify Charger firmware: %s",
+    async def async_added_to_hass(self) -> None:
+        """
+        Load initial state from coordinator data when entity is added to HA.
+
+        Without this, entities for rarely-changing properties (e.g. err, cus)
+        stay "Unknown" until the charger pushes a property change event.
+        """
+        await super().async_added_to_hass()
+        if self._init_failed or self.coordinator.data is None:
+            return
+        value = self.coordinator.data.get(self._identifier)
+        if value is not None:
+            _LOGGER.debug(
+                "%s - %s: async_added_to_hass: loading initial state",
                 self._charger_id,
                 self._identifier,
-                fw,
             )
-            return False
-        if fw_tst[:2] == ">=":
-            v = Version(fw) >= Version(fw_tst[2:])
-        elif fw_tst[:2] == "<=":
-            v = Version(fw) <= Version(fw_tst[2:])
-        elif fw_tst[:2] == "==":
-            v = Version(fw) == Version(fw_tst[2:])
-        elif fw_tst[:1] == ">":
-            v = Version(fw) > Version(fw_tst[1:])
-        elif fw_tst[:1] == "<":
-            v = Version(fw) < Version(fw_tst[1:])
-        else:
-            _LOGGER.error(
-                "%s - %s: _check_firmware_supported: Invalid firmware version test string: %s",
-                self._charger_id,
-                self._identifier,
-                fw_tst,
-            )
-            return False
-        _LOGGER.debug(
-            "%s - %s: _check_firmware_supported complete (%s%s -> %s)",
-            self._charger_id,
-            self._identifier,
-            fw,
-            fw_tst,
-            v,
-        )
-        return v
-
-    def _check_variant_supported(self) -> bool:
-        """Return if the current charger variant supports this entity."""
-        v_tst = self._entity_cfg.get("variant", None)
-        if v_tst is None:
-            return True
-        variant = GetChargerProp(self._charger, "var", 11)
-        v = str(variant).upper() == str(v_tst).upper()
-        _LOGGER.debug(
-            "%s - %s: _check_variant_supported complete (%s=%s -> %s)",
-            self._charger_id,
-            self._identifier,
-            variant,
-            v_tst,
-            v,
-        )
-        return v
-
-    def _check_connection_supported(self) -> bool:
-        """Return if the current charger connection type supports this entity."""
-        c_tst = self._entity_cfg.get("connection", None)
-        if c_tst is None:
-            return True
-        runtime_data = getattr(self._entry, "runtime_data", None)
-        if runtime_data is None:
-            return True
-        config_params = runtime_data.params or {}
-        connection = config_params.get(CONF_CONNECTION, STATE_UNKNOWN)
-        v = str(connection).upper() == str(c_tst).upper()
-        _LOGGER.debug(
-            "%s - %s: _check_connection_supported complete (%s=%s -> %s)",
-            self._charger_id,
-            self._identifier,
-            connection,
-            c_tst,
-            v,
-        )
-        return v
+            await self.async_local_push(value)
 
     @property
     def description(self) -> str | None:
         """Return the description of the entity."""
         return self._attributes.get("description", None)
-
-    @property
-    def entity_category(self) -> EntityCategory | None:
-        """Return the entity_category of the entity."""
-        if self._entity_category is not None:
-            return EntityCategory(self._entity_category)
-        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -264,135 +358,116 @@ class ChargerPlatformEntity(Entity):
     @property
     def available(self) -> bool:
         """Return if device is available."""
-        if self._init_failed:
+        # Use getattr for _charger_id and _identifier in case init failed early
+        charger_id = getattr(self, "_charger_id", "unknown")
+        identifier = getattr(self, "_identifier", "unknown")
+
+        if not super().available:
+            _LOGGER.debug(
+                "%s - %s: available: false because coordinator unavailable",
+                charger_id,
+                identifier,
+            )
+            return False
+        if getattr(self, "_init_failed", True):
             _LOGGER.debug(
                 "%s - %s: available: false because entity init not complete",
-                self._charger_id,
-                self._identifier,
-            )
-            return False
-        if self._fw_supported is False:
-            _LOGGER.debug(
-                "%s - %s: available: false because entity not supported by charger firmware version",
-                self._charger_id,
-                self._identifier,
-            )
-            return False
-        if self._variant_supported is False:
-            _LOGGER.debug(
-                "%s - %s: available: false because entity not supported by charger variant (11kW/22kW)",
-                self._charger_id,
-                self._identifier,
-            )
-            return False
-        if self._connection_supported is False:
-            _LOGGER.debug(
-                "%s - %s: available: false because entity not supported by charger connection type (local/cloud)",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
         if not getattr(self._charger, "connected", True):
             _LOGGER.debug(
                 "%s - %s: available: false because charger disconnected",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
-        if not getattr(self._charger, "allPropsInitialized", True):
+        if not getattr(self._charger, "properties_initialized", True):
             _LOGGER.debug(
                 "%s - %s: available: false because not all properties initialized",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
-        if self._source == "attribute" and not hasattr(self._charger, self._identifier):
+        if self._source == SOURCE_ATTRIBUTE and not hasattr(
+            self._charger, self._identifier
+        ):
             _LOGGER.debug(
                 "%s - %s: available: false because unknown attribute",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
         if (
-            self._source == "property"
+            self._source == SOURCE_PROPERTY
             and GetChargerProp(self._charger, self._identifier, self._default_state)
             is None
         ):
             _LOGGER.debug(
                 "%s - %s: available: false because unknown property",
-                self._charger_id,
-                self._identifier,
+                charger_id,
+                identifier,
             )
             return False
-        if (
-            self._source == "namespacelist"
-            and GetChargerProp(self._charger, self._identifier, self._default_state)[
-                int(self._namespace_id)
-            ]
-            is None
-        ):
-            _LOGGER.debug(
-                "%s - %s: available: false because unknown namespacelist item: %s",
-                self._charger_id,
-                self._identifier,
-                self._namespace_id,
+        if self._source == SOURCE_NAMESPACELIST:
+            ns_val = GetChargerProp(
+                self._charger, self._identifier, self._default_state
             )
-            return False
+            # Treat non-list/tuple as unavailable
+            if not isinstance(ns_val, (list, tuple)):
+                _LOGGER.debug(
+                    "%s - %s: available: false because namespacelist is not a list/tuple: %s[%s]",
+                    charger_id,
+                    identifier,
+                    self._namespace_id,
+                    type(ns_val).__name__,
+                )
+                return False
+            try:
+                ns_idx = int(self._namespace_id)
+            except (TypeError, ValueError):
+                ns_idx = -1
+            if ns_idx < 0 or ns_idx >= len(ns_val) or ns_val[ns_idx] is None:
+                _LOGGER.debug(
+                    "%s - %s: available: false because unknown namespacelist item: %s",
+                    self._charger_id,
+                    self._identifier,
+                    self._namespace_id,
+                )
+                return False
         return True
 
     @property
     def should_poll(self) -> bool:
         """Return True if polling is needed."""
-        if self._source == "attribute":
+        if self._source == SOURCE_ATTRIBUTE:
             return True
-        if self._source == "namespacelist":
+        if self._source == SOURCE_NAMESPACELIST:
             return True
-        return getattr(self, self._state_attr, STATE_UNKNOWN) == self._entity_cfg.get(
-            "default_state", STATE_UNKNOWN
+        return getattr(self, self._state_attr, STATE_UNKNOWN) == (
+            self._default_state if self._default_state is not None else STATE_UNKNOWN
         )
-
-    @property
-    def entity_registry_enabled_default(self) -> bool:
-        """Return False if the entity should be disable by default."""
-        try:
-            enabled = self._entity_cfg.get("enabled", True)
-            return enabled is not False and str(enabled).lower() != "false"
-        except Exception as e:
-            _LOGGER.error(
-                "%s - %s: entity_registry_enabled_default failed - default enable: %s (%s.%s)",
-                self._charger_id,
-                self._identifier,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
-            )
-            return True
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return a device description for device registry."""
+        serial = getattr(self._charger, "serial", None)
+        model = getattr(self._charger, "model", None)
+        variant = getattr(self._charger, "variant", None)
+        # Use entry_id as fallback if serial is missing to avoid collisions
+        device_id = serial or self._entry.entry_id
         return DeviceInfo(
-            identifiers={
-                (
-                    DOMAIN,
-                    getattr(
-                        self._charger,
-                        "serial",
-                        GetChargerProp(self._charger, "sse", None),
-                    ),
-                )
-            },
-            manufacturer=getattr(self._charger, "manufacturer", STATE_UNKNOWN),
-            model=GetChargerProp(
-                self._charger,
-                "typ",
-                getattr(self._charger, "devicetype", STATE_UNKNOWN),
-            ),
+            identifiers={(DOMAIN, device_id)},
+            manufacturer=getattr(self._charger, "manufacturer", None),
+            model=model,
             name=getattr(
-                self._charger, "name", getattr(self._charger, "hostname", STATE_UNKNOWN)
+                self._charger,
+                "name",
+                getattr(self._charger, "hostname", None),
             ),
-            sw_version=getattr(self._charger, "firmware", STATE_UNKNOWN),
-            hw_version=str(GetChargerProp(self._charger, "var", STATE_UNKNOWN)) + " KW",
+            sw_version=getattr(self._charger, "firmware", None),
+            hw_version=f"{variant} KW" if variant else None,
         )
 
     async def async_update(self) -> None:
@@ -404,14 +479,14 @@ class ChargerPlatformEntity(Entity):
                 return
             if self.should_poll:
                 _LOGGER.debug(
-                    "%s - %s: async_update is done via poll - initiate",
+                    "%s - %s: async_update via poll",
                     self._charger_id,
                     self._identifier,
                 )
                 await self.async_local_poll()
             else:
                 _LOGGER.debug(
-                    "%s - %s: async_update is done via push - do nothing / wait for push event",
+                    "%s - %s: async_update via push - waiting",
                     self._charger_id,
                     self._identifier,
                 )
@@ -426,7 +501,8 @@ class ChargerPlatformEntity(Entity):
             )
 
     async def _async_update_validate_property(self, state: Any = None) -> Any | None:
-        """Async: Validate the given state object, set attributes if necessary and return new single state."""
+        """Async: Validate the given state, set attributes if necessary and return new state."""
+        desc = self.entity_description
         try:
             if str(state).startswith("namespace"):
                 _LOGGER.debug(
@@ -435,34 +511,28 @@ class ChargerPlatformEntity(Entity):
                     self._identifier,
                 )
                 namespace = state
-                if self._entity_cfg.get("value_id", None) is None:
+                if desc.value_id is None:
                     _LOGGER.error(
                         "%s - %s: _async_update_validate_property failed: "
-                        "please specific the 'value_id' to use as state value",
+                        "please specify 'value_id' for state value",
                         self._charger_id,
                         self._identifier,
                     )
                     return None
-                state = getattr(
-                    namespace,
-                    self._entity_cfg.get("value_id", STATE_UNKNOWN),
-                    STATE_UNKNOWN,
-                )
-                for attr_id in self._entity_cfg.get("attribute_ids", []):
+                state = getattr(namespace, str(desc.value_id), STATE_UNKNOWN)
+                for attr_id in desc.attribute_ids or []:
                     self._attributes[attr_id] = getattr(
                         namespace, attr_id, STATE_UNKNOWN
                     )
             elif isinstance(state, list):
                 state_list = state
-                if self._entity_cfg.get("value_id", None) is None:
+                if desc.value_id is None:
                     state = state_list[0]
-                    i = 1
-                    for attr_state in state_list[1:]:
-                        self._attributes["state" + str(i)] = attr_state
-                        i = i + 1
+                    for i, attr_state in enumerate(state_list[1:], start=1):
+                        self._attributes[f"state{i}"] = attr_state
                 else:
-                    state = state_list[int(self._entity_cfg.get("value_id", 0))]
-                    for attr_entry in self._entity_cfg.get("attribute_ids", []):
+                    state = state_list[int(desc.value_id)]
+                    for attr_entry in desc.attribute_ids or []:
                         attr_id = attr_entry.split(":")[0]
                         attr_index = attr_entry.split(":")[1]
                         self._attributes[attr_id] = state_list[int(attr_index)]
@@ -482,8 +552,6 @@ class ChargerPlatformEntity(Entity):
         self, state: Any = None
     ) -> Any | None:
         """Async: Validate the given state for platform specific requirements."""
-        # Do nothing here as this is only a drop-in option for other platforms
-        # Return None if validation failed
         return state
 
     async def async_local_poll(self) -> None:
@@ -492,13 +560,32 @@ class ChargerPlatformEntity(Entity):
             _LOGGER.debug(
                 "%s - %s: async_local_poll", self._charger_id, self._identifier
             )
-            if self._source == "attribute":
+            if self._source == SOURCE_ATTRIBUTE:
                 state = getattr(self._charger, self._identifier, self._default_state)
-            elif self._source == "namespacelist":
+            elif self._source == SOURCE_NAMESPACELIST:
                 state = await async_GetChargerProp(
                     self._charger, self._identifier, self._default_state
                 )
-                state = state[int(self._namespace_id)]
+                try:
+                    ns_idx = int(self._namespace_id)
+                except (TypeError, ValueError):
+                    _LOGGER.error(
+                        "%s - %s: async_local_poll invalid namespacelist index: %s",
+                        self._charger_id,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    return
+                if not isinstance(state, (list, tuple)) or ns_idx >= len(state):
+                    _LOGGER.error(
+                        "%s - %s: async_local_poll namespacelist index out of range: %s",
+                        self._charger_id,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    return
+
+                state = state[ns_idx]
                 _LOGGER.debug(
                     "%s - %s: async_local_poll namespace pre validate state of %s: %s",
                     self._charger_id,
@@ -514,7 +601,7 @@ class ChargerPlatformEntity(Entity):
                     self._attr_unique_id,
                     state,
                 )
-            elif self._source == "property":
+            elif self._source == SOURCE_PROPERTY:
                 state = await async_GetChargerProp(
                     self._charger, self._identifier, self._default_state
                 )
@@ -542,12 +629,26 @@ class ChargerPlatformEntity(Entity):
             _LOGGER.debug(
                 "%s - %s: async_local_push", self._charger_id, self._identifier
             )
-            if self._source == "attribute":
+            if self._source == SOURCE_ATTRIBUTE:
                 pass
-            elif self._source == "namespacelist":
-                state = state[int(self._namespace_id)]
+            elif self._source == SOURCE_NAMESPACELIST:
+                try:
+                    ns_idx = int(self._namespace_id)
+                except (TypeError, ValueError):
+                    _LOGGER.error(
+                        "%s - %s: async_local_push invalid namespacelist index: %s",
+                        self._charger_id,
+                        self._identifier,
+                        self._namespace_id,
+                    )
+                    state = None
+                else:
+                    if isinstance(state, (list, tuple)) and ns_idx < len(state):
+                        state = state[ns_idx]
+                    else:
+                        state = None
                 state = await self._async_update_validate_property(state)
-            elif self._source == "property":
+            elif self._source == SOURCE_PROPERTY:
                 state = await self._async_update_validate_property(state)
 
             state = await self._async_update_validate_platform_state(state)
@@ -555,7 +656,7 @@ class ChargerPlatformEntity(Entity):
                 setattr(self, self._state_attr, state)
                 self.async_write_ha_state()
             else:
-                await self.hass.async_create_task(self.async_local_poll())
+                await self.async_local_poll()
         except Exception as e:
             if type(e).__name__ == "NoEntitySpecifiedError" and not initwait:
                 _LOGGER.debug(

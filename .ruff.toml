@@ -7,7 +7,6 @@ select = [
     "ALL",
 ]
 exclude = [
-    "custom_components/wattpilot/wattpilot/**",
     "set_values_test.py",
 ]
 
@@ -22,7 +21,7 @@ ignore = [
     "FBT002", # Boolean default positional argument
     "FBT003", # Boolean positional value in function call (legacy pattern)
     "BLE001", # Do not catch blind exception (legacy exception handling)
-    "SLF001", # Private member accessed (workaround for wattpilot library)
+    "SLF001", # Private member accessed
     "PLR0911", # Too many return statements (service pattern)
     "E501", # Line too long (acceptable for log messages and complex calls)
     "TRY300", # Consider moving return outside try block (acceptable pattern)
@@ -48,6 +47,24 @@ ignore = [
 
 [lint.flake8-pytest-style]
 fixture-parentheses = false
+
+[lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",   # Use of assert detected (expected in tests)
+    "S106",   # Hardcoded password (test fixtures)
+    "S110",   # try-except-pass (acceptable in tests)
+    "PLR2004", # Magic value comparison (common in tests)
+    "E402",   # Module level import not at top of file (test fixtures)
+    "PLC0415", # Import outside top-level (test fixtures)
+    "ARG002", # Unused method argument (test fixtures)
+    "ARG005", # Unused lambda argument (test fixtures)
+    "B017",   # Assert raises Exception (acceptable in tests)
+    "PT011",  # pytest.raises too broad (acceptable in tests)
+    "PT012",  # pytest.raises multiple statements (acceptable in tests)
+    "SIM105", # Use contextlib.suppress (acceptable in tests)
+    "ANN202", # Missing return type private function (test helpers)
+    "EM101",  # Raw string in exception (acceptable in tests)
+]
 
 [lint.pyupgrade]
 keep-runtime-typing = true

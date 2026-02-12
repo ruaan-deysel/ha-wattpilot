@@ -1,13 +1,154 @@
-tier: bronze
+tier: silver
+
 rules:
-  - runtime-data
-  - has-entity-name
-  - entity-unique-id
-  - unique-config-entry
-  - config-flow
-  - test-before-setup
-  - entity-event-setup
-  - action-setup
-notes:
-  - Services are registered once at integration setup.
-  - Data updates are push-based (iot_class: local_push); runtime_data holds charger/push_entities/params.
+  # Bronze
+  action-setup:
+    status: done
+    comment: Services registered in async_setup_entry via _ensure_services_registered.
+  appropriate-polling:
+    status: exempt
+    comment: Integration is push-based (iot_class local_push) using DataUpdateCoordinator.
+  brands:
+    status: todo
+    comment: Not yet submitted to home-assistant/brands.
+  common-modules:
+    status: done
+    comment: Uses coordinator.py, entities.py, const.py, config_flow.py, types.py.
+  config-flow:
+    status: done
+    comment: ConfigFlowHandler with local and cloud connection options.
+  config-flow-test-coverage:
+    status: todo
+    comment: Tests cover data validation but not full flow step coverage.
+  dependency-transparency:
+    status: done
+    comment: All dependencies listed in manifest.json.
+  docs-high-level-description:
+    status: todo
+    comment: README exists but not submitted to HA docs.
+  docs-installation-instructions:
+    status: done
+    comment: Installation instructions in README.md and info.md.
+  docs-removal-instructions:
+    status: todo
+    comment: Not documented separately.
+  entity-event-setup:
+    status: done
+    comment: Property update handler registered in async_setup_entry.
+  entity-unique-id:
+    status: done
+    comment: Unique IDs use charger serial + entity key.
+  has-entity-name:
+    status: done
+    comment: All entities set _attr_has_entity_name = True.
+  runtime-data:
+    status: done
+    comment: Uses entry.runtime_data with WattpilotRuntimeData dataclass.
+  test-before-setup:
+    status: done
+    comment: Charger connection tested before platform setup.
+  unique-config-entry:
+    status: done
+    comment: Config entry uniqueness enforced via charger serial.
+
+  # Silver
+  action-exceptions:
+    status: todo
+    comment: Services catch exceptions but do not raise ServiceValidationError.
+  config-entry-unloading:
+    status: done
+    comment: async_unload_entry disconnects charger and removes listeners.
+  docs-configuration-parameters:
+    status: todo
+    comment: Options flow exists but not documented externally.
+  docs-troubleshooting:
+    status: done
+    comment: Troubleshooting section added to README.md.
+  diagnostics:
+    status: done
+    comment: Full diagnostics with redacted sensitive data.
+  discovery:
+    status: todo
+    comment: No mDNS/SSDP/DHCP discovery implemented.
+  docs-actions:
+    status: done
+    comment: Services documented in services.yaml with translations.
+  entity-category:
+    status: done
+    comment: Entities use appropriate entity_category assignments.
+  entity-disabled-by-default:
+    status: todo
+    comment: No entities disabled by default.
+  exception-translations:
+    status: done
+    comment: ConfigEntryNotReady uses translation_key placeholders.
+  icon-translations:
+    status: done
+    comment: Icons defined in icons.json for services and entities.
+  log-when-unavailable:
+    status: done
+    comment: Coordinator tracks availability with error counting.
+  parallel-updates:
+    status: done
+    comment: Uses default HA parallel updates behavior.
+  reauthentication-flow:
+    status: todo
+    comment: No async_step_reauth implemented yet.
+  reconfiguration-flow:
+    status: todo
+    comment: No async_step_reconfigure implemented yet.
+  test-coverage:
+    status: todo
+    comment: Services and entity coverage need improvement.
+
+  # Gold
+  devices:
+    status: done
+    comment: Device registry with manufacturer, model, serial, firmware.
+  docs-data-update:
+    status: todo
+    comment: Push-based updates not documented externally.
+  docs-examples:
+    status: done
+    comment: README includes a Next Trip automation example.
+  docs-known-limitations:
+    status: todo
+    comment: Not documented.
+  docs-supported-devices:
+    status: todo
+    comment: Fronius Wattpilot 11kW and 22kW variants supported.
+  docs-supported-functions:
+    status: todo
+    comment: Not documented externally.
+  docs-use-cases:
+    status: todo
+    comment: Not documented.
+  dynamic-devices:
+    status: exempt
+    comment: Single charger per config entry.
+  entity-translations:
+    status: done
+    comment: Translation keys in strings.json and translations/.
+  integration-owner:
+    status: todo
+    comment: Not yet assigned in CODEOWNERS.
+  stale-devices:
+    status: exempt
+    comment: Single charger per config entry, removed on unload.
+
+  # Platinum
+  async-dependency:
+    status: todo
+    comment: wattpilot-api uses synchronous websocket internally.
+  docs-event-entities:
+    status: exempt
+    comment: No event entities used.
+  hassio-discovery:
+    status: exempt
+    comment: Not applicable for EV chargers.
+  inject-websession:
+    status: todo
+    comment: Uses direct websocket, not aiohttp_client session.
+  strict-typing:
+    status: todo
+    comment: py.typed marker present but not fully strict.

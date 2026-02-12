@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+import ipaddress
 import logging
 from typing import Final
 
@@ -30,6 +30,16 @@ from .const import (
 )
 
 _LOGGER: Final = logging.getLogger(__name__)
+
+
+def validate_ip_address(value: str) -> str:
+    """Validate an IPv4/IPv6 address string."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError as err:
+        raise vol.Invalid(f"Invalid IP address: {value}") from err
+    return value
+
 
 CONNECTION_SCHEMA: Final = vol.Schema(
     {
@@ -82,7 +92,6 @@ async def async_get_OPTIONS_LOCAL_SCHEMA(current_data):
                 ): cv.positive_int,
             }
         )
-        await asyncio.sleep(0)
         return OPTIONS_LOCAL_SCHEMA
     except Exception as e:
         _LOGGER.error(
@@ -117,7 +126,6 @@ async def async_get_OPTIONS_CLOUD_SCHEMA(current_data):
                 ): cv.positive_int,
             }
         )
-        await asyncio.sleep(0)
         return OPTIONS_CLOUD_SCHEMA
     except Exception as e:
         _LOGGER.error(

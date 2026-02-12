@@ -2,20 +2,28 @@
 
 from __future__ import annotations
 
-import asyncio
 import html
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-import aiofiles
-import yaml
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorEntity,
+)
 from homeassistant.components.sensor.const import UNIT_CONVERTERS
-from homeassistant.const import STATE_UNKNOWN
+from homeassistant.const import (
+    CONF_FRIENDLY_NAME,
+    CONF_IP_ADDRESS,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import HomeAssistant
 
-from .entities import ChargerPlatformEntity
+from .const import DEFAULT_NAME
+from .descriptions import (
+    SENSOR_DESCRIPTIONS,
+    SOURCE_PROPERTY,
+    WattpilotSensorEntityDescription,
+)
+from .entities import ChargerPlatformEntity, filter_descriptions
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -33,99 +41,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up the sensor platform."""
     _LOGGER.debug("Setting up %s platform entry: %s", PLATFORM, entry.entry_id)
+
+    charger = entry.runtime_data.charger
+    push_entities = entry.runtime_data.push_entities
+    charger_id = str(
+        entry.data.get(
+            CONF_FRIENDLY_NAME, entry.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
+        )
+    )
+
+    descriptions = filter_descriptions(SENSOR_DESCRIPTIONS, charger, entry, charger_id)
+
     entities: list[ChargerSensor] = []
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Reading static yaml configuration",
-            entry.entry_id,
-            PLATFORM,
-        )
-        yaml_path = Path(__file__).parent / f"{PLATFORM}.yaml"
-        async with aiofiles.open(yaml_path) as y:
-            yaml_cfg = yaml.safe_load(await y.read())
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        charger = entry.runtime_data.charger
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        push_entities = entry.runtime_data.push_entities
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    for entity_cfg in yaml_cfg[PLATFORM]:
-        try:
-            if "id" not in entity_cfg or entity_cfg["id"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no id: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            if "source" not in entity_cfg or entity_cfg["source"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no source: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            entity = ChargerSensor(hass, entry, entity_cfg, charger)
-            if getattr(entity, "_init_failed", True):
-                continue
-            entities.append(entity)
-            if entity._source == "property":
-                push_entities[entity._identifier] = entity
-            await asyncio.sleep(0)
-        except Exception as e:
-            _LOGGER.error(
-                "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
-                entry.entry_id,
-                PLATFORM,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
-            )
-            return
+    for desc in descriptions:
+        entity = ChargerSensor(hass, entry, desc, charger)
+        if getattr(entity, "_init_failed", True):
+            continue
+        entities.append(entity)
+        if entity._source == SOURCE_PROPERTY:
+            push_entities[entity._identifier] = entity
 
     _LOGGER.info(
         "%s - async_setup_entry: setup %s %s entities",
@@ -133,38 +67,40 @@ async def async_setup_entry(
         len(entities),
         PLATFORM,
     )
-    if not entities:
-        return
-    async_add_entities(entities)
+    if entities:
+        async_add_entities(entities)
 
 
 class ChargerSensor(ChargerPlatformEntity, SensorEntity):
     """Sensor class for Fronius Wattpilot integration."""
 
     _state_attr = "_attr_native_value"
+    entity_description: WattpilotSensorEntityDescription
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
-        self._attr_native_unit_of_measurement = self._entity_cfg.get(
-            "unit_of_measurement", None
-        )
-        unit_converter = UNIT_CONVERTERS.get(self._attr_device_class)
-        if (
-            unit_converter is not None
-            and self._attr_native_unit_of_measurement in unit_converter.VALID_UNITS
-        ):
-            self._attr_suggested_unit_of_measurement = self._entity_cfg.get(
-                "unit_of_measurement", None
-            )
-        if self._entity_cfg.get("state_class", None) is not None:
-            state_class = self._entity_cfg.get("state_class")
-            if state_class is not None:
-                self._attr_state_class = SensorStateClass(state_class.lower())
-        if self._entity_cfg.get("enum", None) is not None:
-            enum_data = self._entity_cfg.get("enum")
-            if enum_data is not None:
-                self._state_enum = dict(enum_data)
-        if self._entity_cfg.get("html_unescape", None) is not None:
+        desc = self.entity_description
+
+        # Set native unit of measurement from description
+        self._attr_native_unit_of_measurement = desc.native_unit_of_measurement
+
+        # Set suggested unit of measurement if valid for the device class
+        if desc.device_class is not None:
+            unit_converter = UNIT_CONVERTERS.get(desc.device_class)
+            if (
+                unit_converter is not None
+                and self._attr_native_unit_of_measurement in unit_converter.VALID_UNITS
+            ):
+                self._attr_suggested_unit_of_measurement = (
+                    desc.native_unit_of_measurement
+                )
+
+        # Enum mapping for display values
+        if desc.enum is not None:
+            self._state_enum = dict(desc.enum)
+
+        # HTML unescape flag
+        if desc.html_unescape:
             self._html_unescape = True
 
     async def _async_update_validate_platform_state(
@@ -173,6 +109,11 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
         """Async: Validate the given state for sensor specific requirements."""
         try:
             if state is None or state == "None":
+                # For sensors with a numeric device_class and unit, return None
+                # so HA treats it as "unknown" without raising ValueError.
+                # Only use STATE_UNKNOWN for text-based sensors.
+                if self._attr_native_unit_of_measurement is not None:
+                    return None
                 state = STATE_UNKNOWN
             elif hasattr(self, "_html_unescape") and self._html_unescape:
                 state = html.unescape(state)

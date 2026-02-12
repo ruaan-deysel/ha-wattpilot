@@ -2,34 +2,26 @@
 
 from __future__ import annotations
 
-import asyncio
-import importlib
-import json
 import logging
-import sys
-import types
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
-    CONF_PARAMS,
     CONF_PASSWORD,
-    CONF_TIMEOUT,
 )
 from homeassistant.helpers import device_registry as dr
+from wattpilot_api import Wattpilot
 
 from .const import (
     CONF_CHARGER,
     CONF_CLOUD,
     CONF_CONNECTION,
-    CONF_DBG_PROPS,
     CONF_LOCAL,
+    CONF_PARAMS,
     CONF_PUSH_ENTITIES,
     CONF_SERIAL,
     DEFAULT_NAME,
-    DEFAULT_TIMEOUT,
     DOMAIN,
     EVENT_PROPS,
     EVENT_PROPS_ID,
@@ -42,140 +34,15 @@ if TYPE_CHECKING:
 _LOGGER: Final = logging.getLogger(__name__)
 
 
-def _dynamic_load_module(
-    modulename: str, subfolder: str = "src", initfile: str = "__init__.py"
-) -> Any:
-    """Try to load a module from local custom component; fall back to system."""
-    try:
-        _LOGGER.debug("%s - _dynamic_load_module: %s", DOMAIN, modulename)
-        base_path = Path(__file__).parent
-        local_module_path = base_path / modulename / subfolder
-        local_init_path = local_module_path / modulename / initfile
-        if local_init_path.exists():
-            _LOGGER.debug(
-                "%s - _dynamic_load_module: import local module: %s (%s)",
-                DOMAIN,
-                modulename,
-                local_init_path,
-            )
-            if str(local_module_path) not in sys.path:
-                sys.path.insert(0, str(local_module_path))
-        else:
-            _LOGGER.debug(
-                "%s - _dynamic_load_module: import system wide module: %s",
-                DOMAIN,
-                modulename,
-            )
-        module = importlib.import_module(modulename)
-    except (ImportError, OSError) as err:
-        _LOGGER.exception(
-            "%s - _dynamic_load_module: failed to import %s", DOMAIN, modulename
-        )
-        raise ImportError(f"failed to import module {modulename}") from err
-    return module
-
-
-wattpilot = _dynamic_load_module("wattpilot")
-_LOGGER.debug(
-    "%s - utils: imported module from: %s (%s)",
-    DOMAIN,
-    wattpilot.__file__,
-    getattr(wattpilot, "__version__", "0.2.2?"),
-)
-
-
-async def async_ProgrammingDebug(obj: Any, show_all: bool = False) -> None:
-    """Async: return all attributes of a specific object."""
-    try:
-        _LOGGER.debug("%s - async_ProgrammingDebug: %s", DOMAIN, obj)
-        for attr in dir(obj):
-            if attr.startswith("_") and not show_all:
-                continue
-            if hasattr(obj, attr):
-                _LOGGER.debug(
-                    "%s - async_ProgrammingDebug: %s = %s",
-                    DOMAIN,
-                    attr,
-                    getattr(obj, attr),
-                )
-            await asyncio.sleep(0)
-    except Exception:
-        _LOGGER.exception("%s - async_ProgrammingDebug: failed", DOMAIN)
-
-
-def ProgrammingDebug(obj: Any, show_all: bool = False) -> None:
-    """Return all attributes of a specific object."""
-    try:
-        _LOGGER.debug("%s - ProgrammingDebug: %s", DOMAIN, obj)
-        for attr in dir(obj):
-            if attr.startswith("_") and not show_all:
-                continue
-            if hasattr(obj, attr):
-                _LOGGER.debug(
-                    "%s - ProgrammingDebug: %s = %s", DOMAIN, attr, getattr(obj, attr)
-                )
-    except Exception:
-        _LOGGER.exception("%s - ProgrammingDebug: failed", DOMAIN)
-
-
-async def async_PropertyDebug(
-    identifier: str, value: str, include_properties: bool | list[str]
+async def async_property_update_handler(
+    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: Any
 ) -> None:
-    """Log properties if they change."""
-    exclude_properties = [
-        "efh",
-        "efh32",
-        "efh8",
-        "ehs",
-        "emhb",
-        "fbuf_age",
-        "fbuf_pAkku",
-        "fbuf_pGrid",
-        "fbuf_pPv",
-        "fhz",
-        "loc",
-        "lps",
-        "nrg",
-        "rbt",
-        "rcd",
-        "rfb",
-        "rssi",
-        "tma",
-        "tpcm",
-        "utc",
-        "fbuf_akkuSOC",
-        "lpsc",
-        "pvopt_averagePAkku",
-        "pvopt_averagePGrid",
-        "pvopt_averagePPv",
-        "pvopt_deltaP",
-    ]
-    if (isinstance(include_properties, list) and identifier in include_properties) or (
-        isinstance(include_properties, bool) and identifier not in exclude_properties
-    ):
-        _LOGGER.warning(
-            "async_PropertyDebug: watch_properties: %s => %s ", identifier, value
-        )
+    """Async callback for charger property updates, dispatches to entities."""
+    await _async_handle_property_update(hass, entry, identifier, value)
 
 
-def PropertyUpdateHandler(
-    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: str
-) -> None:
-    """Watches property updates and dispatches to entities."""
-    try:
-        asyncio.run_coroutine_threadsafe(
-            async_PropertyUpdateHandler(hass, entry, identifier, value), hass.loop
-        )
-    except Exception:
-        entry_id = getattr(entry, "entry_id", DOMAIN)
-        _LOGGER.exception(
-            "%s - PropertyUpdateHandler: Could not execute async",
-            entry_id,
-        )
-
-
-async def async_PropertyUpdateHandler(
-    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: str
+async def _async_handle_property_update(
+    hass: HomeAssistant, entry: ConfigEntry, identifier: str, value: Any
 ) -> None:
     """Async: handle charger property updates."""
     try:
@@ -183,10 +50,15 @@ async def async_PropertyUpdateHandler(
         runtime_data = getattr(entry, "runtime_data", None)
         if runtime_data is None:
             _LOGGER.error(
-                "%s - async_PropertyUpdateHandler: runtime_data missing for entry",
+                "%s - _async_handle_property_update: runtime_data missing for entry",
                 entry_id,
             )
             return
+
+        # Notify coordinator of property update
+        coordinator = getattr(runtime_data, "coordinator", None)
+        if coordinator is not None:
+            coordinator.async_handle_property_update(identifier, value)
 
         entity = runtime_data.push_entities.get(identifier)
         if entity is not None:
@@ -206,14 +78,9 @@ async def async_PropertyUpdateHandler(
                 "value": value,
             }
             hass.bus.fire(EVENT_PROPS_ID, data)
-
-        if runtime_data.debug_properties:
-            hass.async_create_task(
-                async_PropertyDebug(identifier, value, runtime_data.debug_properties)
-            )
     except Exception:
         _LOGGER.exception(
-            "%s - async_PropertyUpdateHandler: Could not execute async",
+            "%s - _async_handle_property_update: Could not execute async",
             entry_id,
         )
 
@@ -223,22 +90,21 @@ async def async_GetChargerProp(
 ) -> Any:
     """Async: return the value of a charger attribute."""
     try:
-        if not hasattr(charger, "allProps"):
+        if not hasattr(charger, "all_properties"):
             _LOGGER.error(
-                "%s - async_GetChargerProp: missing allProps: %s", DOMAIN, charger
+                "%s - async_GetChargerProp: missing all_properties: %s", DOMAIN, charger
             )
             return default
-        if identifier is None or identifier not in charger.allProps:
+        if identifier is None or identifier not in charger.all_properties:
             _LOGGER.error(
                 "%s - async_GetChargerProp: Charger does not have property: %s",
                 DOMAIN,
                 identifier,
             )
             return default
-        await asyncio.sleep(0)
-        if charger.allProps[identifier] is None and default is not None:
+        if charger.all_properties[identifier] is None and default is not None:
             return default
-        return charger.allProps[identifier]
+        return charger.all_properties[identifier]
     except Exception:
         _LOGGER.exception("%s - async_GetChargerProp: Could not get property", DOMAIN)
         return default
@@ -249,19 +115,21 @@ def GetChargerProp(
 ) -> Any:
     """Return the value of a charger attribute."""
     try:
-        if not hasattr(charger, "allProps"):
-            _LOGGER.error("%s - GetChargerProp: missing allProps: %s", DOMAIN, charger)
+        if not hasattr(charger, "all_properties"):
+            _LOGGER.error(
+                "%s - GetChargerProp: missing all_properties: %s", DOMAIN, charger
+            )
             return default
-        if identifier is None or identifier not in charger.allProps:
+        if identifier is None or identifier not in charger.all_properties:
             _LOGGER.error(
                 "%s - GetChargerProp: Charger does not have property: %s",
                 DOMAIN,
                 identifier,
             )
             return default
-        if charger.allProps[identifier] is None and default is not None:
+        if charger.all_properties[identifier] is None and default is not None:
             return default
-        return charger.allProps[identifier]
+        return charger.all_properties[identifier]
     except Exception:
         _LOGGER.exception("%s - GetChargerProp: Could not get property", DOMAIN)
         return default
@@ -271,26 +139,16 @@ async def async_SetChargerProp(
     charger: Any,
     identifier: str | None = None,
     value: Any | None = None,
-    force: bool = False,
-    force_type: str | None = None,
 ) -> bool:
-    """Async: set the value of a charger attribute."""
+    """
+    Async: set the value of a charger property.
+
+    Type coercion is handled automatically by wattpilot-api.
+    """
     try:
-        if not hasattr(charger, "allProps"):
-            _LOGGER.error(
-                "%s - async_SetChargerProp: missing allProps: %s", DOMAIN, charger
-            )
-            return False
         if identifier is None:
             _LOGGER.error(
                 "%s - async_SetChargerProp: property name has to be defined", DOMAIN
-            )
-            return False
-        if identifier not in charger.allProps and not force:
-            _LOGGER.error(
-                "%s - async_SetChargerProp: Charger does not have property: %s",
-                DOMAIN,
-                identifier,
             )
             return False
         if value is None:
@@ -302,42 +160,13 @@ async def async_SetChargerProp(
             )
             return False
 
-        if force_type is not None:
-            force_type = str(force_type).lower()
-
-        _LOGGER.debug(
-            "%s - async_SetChargerProp: Prepare new property value: %s=%s",
-            DOMAIN,
-            identifier,
-            value,
-        )
-        if force_type == "str":
-            v = str(value)
-        elif str(value).lower() in ["false", "true"] or force_type == "bool":
-            v = json.loads(str(value).lower())
-        elif str(value).isnumeric() or force_type == "int":
-            v = int(value)
-        elif str(value).isdecimal() or force_type == "float":
-            v = float(value)
-        elif type(value) is types.SimpleNamespace:
-            _LOGGER.warning(
-                "%s - async_SetChargerProp: namespace set is untested: %s=%s",
-                DOMAIN,
-                identifier,
-                value,
-            )
-            v = value.__dict__
-        else:
-            v = str(value)
-
         _LOGGER.debug(
             "%s - async_SetChargerProp: Send property update to charger: %s=%s",
             DOMAIN,
             identifier,
-            v,
+            value,
         )
-        charger.send_update(identifier, v)
-        await asyncio.sleep(0)
+        await charger.set_property(identifier, value)
     except Exception:
         _LOGGER.exception("%s - async_SetChargerProp: Could not set property", DOMAIN)
         return False
@@ -375,12 +204,10 @@ async def async_GetDataStoreFromDeviceID(
             runtime_data = getattr(entry, "runtime_data", None)
             if runtime_data is None:
                 continue
-            await asyncio.sleep(0)
             return {
                 CONF_CHARGER: runtime_data.charger,
                 CONF_PUSH_ENTITIES: runtime_data.push_entities,
                 CONF_PARAMS: runtime_data.params,
-                CONF_DBG_PROPS: runtime_data.debug_properties,
                 "entry": entry,
                 "runtime_data": runtime_data,
             }
@@ -428,7 +255,6 @@ async def async_GetChargerFromDeviceID(hass: HomeAssistant, device_id: str) -> A
             if runtime_data is None:
                 continue
             charger = runtime_data.charger
-            await asyncio.sleep(0)
             break
         if charger is None:
             _LOGGER.error(
@@ -463,8 +289,8 @@ async def async_ConnectCharger(
                 CONF_LOCAL,
                 charger_id,
             )
-            charger = wattpilot.Wattpilot(
-                ip=charger_id,
+            charger = Wattpilot(
+                host=charger_id,
                 password=data.get(CONF_PASSWORD),
                 serial=charger_id,
                 cloud=False,
@@ -477,8 +303,8 @@ async def async_ConnectCharger(
                 CONF_CLOUD,
                 charger_id,
             )
-            charger = wattpilot.Wattpilot(
-                ip=charger_id,
+            charger = Wattpilot(
+                host=charger_id,
                 password=data.get(CONF_PASSWORD),
                 serial=charger_id,
                 cloud=True,
@@ -499,57 +325,10 @@ async def async_ConnectCharger(
             )
         if charger is None:
             return False
-        charger.connect()
+        await charger.connect()
     except Exception:
         _LOGGER.exception(
             "%s - async_ConnectCharger: Connecting charger failed", entry_or_device_id
-        )
-        return False
-
-    try:
-        _LOGGER.debug(
-            "%s - async_ConnectCharger: ensure charger is ready: %s",
-            entry_or_device_id,
-            charger_id,
-        )
-        timer = 0
-        timeout = data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
-        while timeout > timer and not (
-            charger.connected and charger.allPropsInitialized
-        ):
-            await asyncio.sleep(1)
-            timer += 1
-        if not charger.connected:
-            _LOGGER.error(
-                "%s - async_ConnectCharger: timeout - charger not connected: %s (%s sec)",
-                entry_or_device_id,
-                charger.connected,
-                timeout,
-            )
-            _LOGGER.error(
-                "%s - async_ConnectCharger: restart charger via Wattpilot app",
-                entry_or_device_id,
-            )
-            return False
-        if not charger.allPropsInitialized:
-            _LOGGER.error(
-                "%s - async_ConnectCharger: timeout - charger not initialized: %s (%s sec)",
-                entry_or_device_id,
-                charger.allPropsInitialized,
-                timeout,
-            )
-            return False
-        if not timeout > timer:
-            _LOGGER.error(
-                "%s - async_ConnectCharger: Timeout - unknown reason: %s sec",
-                entry_or_device_id,
-                timeout,
-            )
-            return False
-    except Exception:
-        _LOGGER.exception(
-            "%s - async_ConnectCharger: Initialize charger failed",
-            entry_or_device_id,
         )
         return False
 
@@ -569,11 +348,7 @@ async def async_DisconnectCharger(entry_or_device_id: str, charger: Any) -> None
             entry_or_device_id,
             charger,
         )
-        if hasattr(charger, "disconnect") and callable(charger.disconnect):
-            charger.disconnect()
-        else:  # temporary workaround until wattpilot exposes disconnect
-            charger._wsapp.close()
-            charger._connected = False
+        await charger.disconnect()
     except Exception:
         _LOGGER.exception(
             "%s - async_DisconnectCharger: Disconnect charger failed",

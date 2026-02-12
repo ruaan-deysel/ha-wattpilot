@@ -5,7 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2025-12-08
+## [2026.2.0] - 2026-02-11
+
+### Added
+
+- Migrated integration to the wattpilot-api
+- Integration now follows Home Assistant versioning scheme (YYYY.MAJOR.MINOR) with date-based major version and semantic minor/patch versions
+
+## [0.5.0] - 2026-02-03
+
+### Added
+
+- **DataUpdateCoordinator**: Implemented coordinator pattern wrapping WebSocket push-based updates for centralized availability handling and coordinated entity updates
+- **CoordinatorEntity Base**: All platform entities now inherit from `CoordinatorEntity` for proper availability management
+- **Comprehensive Test Suite**: Added 50 tests including coordinator tests, diagnostics tests, config flow tests, and sensor tests
+- **Test Infrastructure**: Created test fixtures with mock charger properties and expected entity states for reliable testing
+- **Diagnostics Platform**: Added diagnostics support with sensitive data redaction (passwords, WiFi credentials, serial numbers)
+- **Exception Translations**: Added new exception translation keys `charger_unavailable`, `update_failed`, and `entry_cannot_connect` with messages in English and German, replacing the old keys `charger_not_found`, `connection_failed`, and `invalid_property`
+- **Service Icons**: Added icons for all services (set_next_trip, set_goe_cloud, disconnect_charger, reconnect_charger)
+- **Type Annotations**: Added `py.typed` marker file for PEP 561 compliance indicating inline type annotations
+- **Pre-commit Hooks**: Configured pre-commit with ruff, codespell, yamllint, and prettier for code quality
+- **CI/CD Workflow**: Added continuous integration with pytest, coverage reporting, and Codecov integration
+- **UV Dependency Management**: Migrated from pip/Poetry to uv with PEP 621 pyproject.toml for faster dependency resolution
+- **UV Pre-commit Hook**: Added `uv-lock-check` hook to validate lock file synchronization
+- **Translation Enhancements**: Added missing `invalid_connection` abort reason and `update_failed`, `entry_cannot_connect` exception keys
+
+### Changed
+
+- **Quality Scale Upgrade**: Integration upgraded from Bronze to Silver tier following Home Assistant quality scale guidelines
+- **Entity Base Class**: `ChargerPlatformEntity` now extends `CoordinatorEntity` with coordinator availability checks
+- **Runtime Data Structure**: Added `coordinator` field to `WattpilotRuntimeData` for centralized data management
+- **Property Update Handler**: Updated to notify coordinator of property changes for coordinated entity updates
+- **Sensor Configuration**: Enhanced Energy Dashboard sensor descriptions and updated state classes (`total_increasing` for energy sensors)
+- **Test Configuration**: Enhanced pytest configuration with async support and coverage settings
+- **Documentation**: Updated README with improved badges and codecov integration
+- **Build Backend**: Switched from poetry-core to hatchling for PEP 621 compliance
+- **Python Requirement**: Updated to >=3.13.2 matching Home Assistant core requirements
+- **Scripts**: Updated setup, lint, and test scripts to use `uv run` commands
+- **Translation Keys**: Aligned options flow step keys across all translation files (config_connection, config_local, config_cloud)
+
+### Removed
+
+- **Dead Code**: Removed unused constants (FUNC_OPTION_UPDATES, FUNC_PROPERTY_UPDATES_CALLBACK, CONF_CHARGERS, CONF_DBG_PROPS)
+- **Dead Attributes**: Removed write-only entity attributes (\_fw_supported, \_variant_supported, \_connection_supported)
+- **Dead Methods**: Removed unused `_get_platform_specific_state()` from number.py
+- **Dead Fields**: Removed `debug_properties` field and all references, `id_status` field from update entity descriptions
+- **Dead Test Code**: Removed unused test fixture `get_expected_entity_states()` and expected_entity_states.json
+- **Redundant Code**: Removed 5 gratuitous `asyncio.sleep(0)` calls and resulting dead asyncio imports
+- **Redundant Icons**: Removed 64 redundant `icon=` attributes from descriptions.py (icons.json provides all entity icons)
+- **Old Exception Keys**: Replaced old exception translation keys (`charger_not_found`, `connection_failed`, `invalid_property`) with new keys (`charger_unavailable`, `update_failed`, `entry_cannot_connect`)
+- **Requirements.txt**: Removed in favor of uv.lock as single source of truth
+- **Embedded Library**: Removed embedded wattpilot library files (now using wattpilot-api package exclusively)
+
+### Fixed
+
+- **Coordinator Await TypeError**: Fixed `TypeError: object NoneType can't be used in 'await' expression` — `async_handle_property_update` is a sync `@callback` method, not async; removed incorrect `await` in property update handler
+- **Numeric Sensor Default State**: Fixed `ValueError` for sensors with numeric device classes (e.g., temperature) by returning `None` instead of `STATE_UNKNOWN` string when no value is available — HA requires `None` for numeric sensors, not the string `"unknown"`
+- **Sensor Device Classes**: Fixed device_class string to enum conversion preventing Energy Dashboard recognition
+- **Availability Handling**: Entities now properly check coordinator availability before reporting their own status
+- **Error Logging**: Improved logging when charger becomes unavailable with translation support
+- **Missing Property Log Level**: Changed missing charger property log from ERROR to WARNING for optional properties that may not exist on all charger variants
+- **Entity Filtering for Missing Properties**: Added property-existence check to `filter_descriptions()` — entities with `source=SOURCE_PROPERTY` whose charger property doesn't exist are now filtered out before entity creation, eliminating spurious log warnings (e.g., `trx` on chargers without NFC chip support)
+- **Translation Formatting**: Fixed corrupted escaped quotes in German translations (de.json)
+- **Code Quality**: Replaced unnecessary lambda wrapper in test fixtures (ruff PLW0108)
+- **Test Fixture**: Fixed `test_select_current_option_reverse_lookup_fails` to use `select_options=` (correct field) instead of `options=`
 
 ## [0.4.2] - 2025-12-09
 

@@ -1,24 +1,14 @@
 {
   "domain": "wattpilot",
   "name": "Fronius Wattpilot",
-  "version": "0.4.2",
+  "version": "2026.2.0",
   "integration_type": "device",
   "config_flow": true,
   "documentation": "https://github.com/ruaan-deysel/ha-wattpilot",
   "issue_tracker": "https://github.com/ruaan-deysel/ha-wattpilot/issues",
-  "requirements": [
-    "wattpilot>=0.2",
-    "pyyaml>=5.3.0",
-    "importlib_metadata>=4.0.0",
-    "aiofiles>=23.2.1",
-    "packaging>=24.0"
-  ],
+  "requirements": ["wattpilot-api>=1.2.0", "packaging>=24.0"],
   "dependencies": [],
-  "codeowners": [
-    "@ruaan-deysel"
-  ],
+  "codeowners": ["@ruaan-deysel"],
   "iot_class": "local_push",
-  "loggers": [
-    "wattpilot"
-  ]
+  "loggers": ["wattpilot_api"]
 }

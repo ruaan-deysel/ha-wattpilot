@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Script to run tests for the Fronius Wattpilot integration
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Run tests
+echo "Running tests..."
+uv run pytest tests/ "$@"

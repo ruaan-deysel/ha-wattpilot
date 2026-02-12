@@ -22,11 +22,13 @@ Custom Home Assistant integration for monitoring and controlling Fronius Wattpil
 ## Screenshots
 
 ### Device View
+
 ![screenshot of Wattpilot Device](doc/device_view1.jpg)
 ![screenshot of Wattpilot Device](doc/device_view2.jpg)
 ![screenshot of Wattpilot Device](doc/device_view3.jpg)
 
 ### Service Call
+
 ![screenshot of Next Trip service](doc/service_view1.jpg)
 
 ## Credits
@@ -43,5 +45,5 @@ This integration is not officially associated with or endorsed by Fronius. It us
 
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for details.
 
-Copyright (c) 2023 @mk-maddin - Original Author  
+Copyright (c) 2023 @mk-maddin - Original Author
 Copyright (c) 2024-2025 @ruaan-deysel - Current Maintainer

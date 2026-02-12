@@ -2,31 +2,32 @@
 
 from __future__ import annotations
 
-import asyncio
 import functools
 import logging
 import re
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-import aiofiles
-import yaml
 from homeassistant.components.update import (
     UpdateEntity,
     UpdateEntityFeature,
 )
 from homeassistant.const import (
-    CONF_TIMEOUT,
+    CONF_FRIENDLY_NAME,
+    CONF_IP_ADDRESS,
 )
 from packaging.version import Version
 
 from .const import (
-    DEFAULT_TIMEOUT,
+    DEFAULT_NAME,
 )
-from .entities import ChargerPlatformEntity
+from .descriptions import (
+    SOURCE_PROPERTY,
+    UPDATE_DESCRIPTIONS,
+    WattpilotUpdateEntityDescription,
+)
+from .entities import ChargerPlatformEntity, filter_descriptions
 from .utils import (
     GetChargerProp,
-    async_SetChargerProp,
 )
 
 if TYPE_CHECKING:
@@ -46,105 +47,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up the update platform."""
     _LOGGER.debug("Setting up %s platform entry: %s", PLATFORM, entry.entry_id)
+
+    charger = entry.runtime_data.charger
+    push_entities = entry.runtime_data.push_entities
+    charger_id = str(
+        entry.data.get(
+            CONF_FRIENDLY_NAME, entry.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
+        )
+    )
+
+    descriptions = filter_descriptions(UPDATE_DESCRIPTIONS, charger, entry, charger_id)
+
     entities: list[ChargerUpdate] = []
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Reading static yaml configuration",
-            entry.entry_id,
-            PLATFORM,
-        )
-        yaml_path = Path(__file__).parent / f"{PLATFORM}.yaml"
-        async with aiofiles.open(yaml_path) as y:
-            yaml_cfg = yaml.safe_load(await y.read())
-    except Exception:
-        _LOGGER.exception(
-            "%s - async_setup_entry %s: reading %s.yaml failed",
-            entry.entry_id,
-            PLATFORM,
-            PLATFORM,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        charger = entry.runtime_data.charger
-    except Exception:
-        _LOGGER.exception(
-            "%s - async_setup_entry %s: getting charger from runtime_data failed",
-            entry.entry_id,
-            PLATFORM,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        push_entities = entry.runtime_data.push_entities
-    except Exception:
-        _LOGGER.exception(
-            "%s - async_setup_entry %s: getting push entities dict failed",
-            entry.entry_id,
-            PLATFORM,
-        )
-        return
-
-    for entity_cfg in yaml_cfg[PLATFORM]:
-        try:
-            entity_cfg["source"] = "property"
-            if "id" not in entity_cfg or entity_cfg["id"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no id: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            if "id_installed" not in entity_cfg or entity_cfg["id_installed"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: invalid yaml - missing id_installed: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            if "id_trigger" not in entity_cfg or entity_cfg["id_trigger"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: invalid yaml - missing id_trigger: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            if "source" not in entity_cfg or entity_cfg["source"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: invalid yaml - missing source: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            entity = ChargerUpdate(hass, entry, entity_cfg, charger)
-            if getattr(entity, "_init_failed", True):
-                continue
-            entities.append(entity)
-            if entity._source == "property":
-                push_entities[entity._identifier] = entity
-            await asyncio.sleep(0)
-        except Exception:
-            _LOGGER.exception(
-                "%s - async_setup_entry %s: entity creation failed",
-                entry.entry_id,
-                PLATFORM,
-            )
-            return
+    for desc in descriptions:
+        entity = ChargerUpdate(hass, entry, desc, charger)
+        if getattr(entity, "_init_failed", True):
+            continue
+        entities.append(entity)
+        if entity._source == SOURCE_PROPERTY:
+            push_entities[entity._identifier] = entity
 
     _LOGGER.info(
         "%s - async_setup_entry: setup %s %s entities",
@@ -152,9 +73,8 @@ async def async_setup_entry(
         len(entities),
         PLATFORM,
     )
-    if not entities:
-        return
-    async_add_entities(entities)
+    if entities:
+        async_add_entities(entities)
 
 
 class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
@@ -162,16 +82,17 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
 
     _state_attr = "_attr_latest_version"
     _dummy_version = "0.0.1"
-    _available_versions: dict[str, str] = {}
+    entity_description: WattpilotUpdateEntityDescription
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
+        desc = self.entity_description
         _LOGGER.debug(
             "%s - %s: _init_platform_specific", self._charger_id, self._identifier
         )
-        self._identifier_installed = self._entity_cfg.get("id_installed")
-        self._identifier_trigger = self._entity_cfg.get("id_trigger", None)
-        self._identifier_status = self._entity_cfg.get("id_status", None)
+        self._available_versions: dict[str, str] = {}
+        self._identifier_installed = desc.id_installed
+        self._identifier_trigger = desc.id_trigger
 
         self._attr_installed_version = GetChargerProp(
             self._charger, self._identifier_installed, None
@@ -273,58 +194,19 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
                     self._available_versions,
                 )
                 return
+
             _LOGGER.debug(
-                "%s - %s: async_install: trigger charger update via: %s -> %s",
+                "%s - %s: async_install: installing firmware version: %s",
                 self._charger_id,
                 self._identifier,
-                self._identifier_trigger,
                 v_name,
             )
-            await async_SetChargerProp(
-                self._charger,
-                self._identifier_trigger,
-                v_name,
-                force=True,
-                force_type=self._set_type,
-            )
-
-            # Get timeout from config
-            timeout = DEFAULT_TIMEOUT
-            runtime_data = getattr(self._entry, "runtime_data", None)
-            if runtime_data is not None:
-                config_params = runtime_data.params or {}
-                timeout = config_params.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
-            timeout = timeout * 4
-
-            timer = 0
-            while timeout > timer and self._charger.connected:
-                await asyncio.sleep(1)
-                timer += 1
-            if self._charger.connected:
-                _LOGGER.error(
-                    "%s - %s: async_install: timeout during update install: %s sec",
-                    self._charger_id,
-                    self._identifier,
-                    timeout,
-                )
-                return
-            _LOGGER.debug(
-                "%s - %s: async_install: charger disconnected - waiting for reconnect",
+            await self._charger.install_firmware_update(v_name)
+            _LOGGER.info(
+                "%s - %s: async_install: firmware update complete",
                 self._charger_id,
                 self._identifier,
             )
-            timer = 0
-            while timeout > timer and not self._charger.connected:
-                await asyncio.sleep(1)
-                timer += 1
-            if not self._charger.connected:
-                _LOGGER.error(
-                    "%s - %s: async_install: timeout during charger restart: %s sec",
-                    self._charger_id,
-                    self._identifier,
-                    timeout,
-                )
-                return
         except Exception:
             _LOGGER.exception(
                 "%s - %s: async_install failed", self._charger_id, self._identifier

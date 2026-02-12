@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-import aiofiles
-import yaml
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import (
+    CONF_FRIENDLY_NAME,
+    CONF_IP_ADDRESS,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
 )
 from homeassistant.core import HomeAssistant
 
-from .entities import ChargerPlatformEntity
+from .const import DEFAULT_NAME
+from .descriptions import (
+    SOURCE_PROPERTY,
+    SWITCH_DESCRIPTIONS,
+    WattpilotSwitchEntityDescription,
+)
+from .entities import ChargerPlatformEntity, filter_descriptions
 from .utils import async_SetChargerProp
 
 if TYPE_CHECKING:
@@ -36,100 +40,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up the switch platform."""
     _LOGGER.debug("Setting up %s platform entry: %s", PLATFORM, entry.entry_id)
+
+    charger = entry.runtime_data.charger
+    push_entities = entry.runtime_data.push_entities
+    charger_id = str(
+        entry.data.get(
+            CONF_FRIENDLY_NAME, entry.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
+        )
+    )
+
+    descriptions = filter_descriptions(SWITCH_DESCRIPTIONS, charger, entry, charger_id)
+
     entities: list[ChargerSwitch] = []
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Reading static yaml configuration",
-            entry.entry_id,
-            PLATFORM,
-        )
-        yaml_path = Path(__file__).parent / f"{PLATFORM}.yaml"
-        async with aiofiles.open(yaml_path) as y:
-            yaml_cfg = yaml.safe_load(await y.read())
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        charger = entry.runtime_data.charger
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        push_entities = entry.runtime_data.push_entities
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    for entity_cfg in yaml_cfg[PLATFORM]:
-        try:
-            entity_cfg["source"] = "property"
-            if "id" not in entity_cfg or entity_cfg["id"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no id: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            if "source" not in entity_cfg or entity_cfg["source"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no source: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            entity = ChargerSwitch(hass, entry, entity_cfg, charger)
-            if getattr(entity, "_init_failed", True):
-                continue
-            entities.append(entity)
-            if entity._source == "property":
-                push_entities[entity._identifier] = entity
-            await asyncio.sleep(0)
-        except Exception as e:
-            _LOGGER.error(
-                "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
-                entry.entry_id,
-                PLATFORM,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
-            )
-            return
+    for desc in descriptions:
+        entity = ChargerSwitch(hass, entry, desc, charger)
+        if getattr(entity, "_init_failed", True):
+            continue
+        entities.append(entity)
+        if entity._source == SOURCE_PROPERTY:
+            push_entities[entity._identifier] = entity
 
     _LOGGER.info(
         "%s - async_setup_entry: setup %s %s entities",
@@ -137,15 +66,15 @@ async def async_setup_entry(
         len(entities),
         PLATFORM,
     )
-    if not entities:
-        return
-    async_add_entities(entities)
+    if entities:
+        async_add_entities(entities)
 
 
 class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
     """Switch class for Fronius Wattpilot integration."""
 
     _state_attr = "_internal_state"
+    entity_description: WattpilotSwitchEntityDescription
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
@@ -171,7 +100,7 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
                 )
                 state = STATE_UNKNOWN
 
-            if state == STATE_ON and self._entity_cfg.get("invert", False):
+            if state == STATE_ON and self.entity_description.invert:
                 _LOGGER.debug(
                     "%s - %s: _async_update_validate_platform_state: invert state: %s -> %s",
                     self._charger_id,
@@ -180,7 +109,7 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
                     STATE_OFF,
                 )
                 state = STATE_OFF
-            elif state == STATE_OFF and self._entity_cfg.get("invert", False):
+            elif state == STATE_OFF and self.entity_description.invert:
                 _LOGGER.debug(
                     "%s - %s: _async_update_validate_platform_state: invert state: %s -> %s",
                     self._charger_id,
@@ -209,12 +138,11 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
         """Async: Turn entity on."""
         try:
             _LOGGER.debug(
-                "%s - %s: async_turn_on: %s",
+                "%s - %s: async_turn_on",
                 self._charger_id,
                 self._identifier,
-                self._attr_name,
             )
-            value = not self._entity_cfg.get("invert", False)
+            value = not self.entity_description.invert
             await async_SetChargerProp(self._charger, self._identifier, value)
         except Exception:
             _LOGGER.exception(
@@ -225,12 +153,11 @@ class ChargerSwitch(ChargerPlatformEntity, SwitchEntity):
         """Async: Turn entity off."""
         try:
             _LOGGER.debug(
-                "%s - %s: async_turn_off: %s",
+                "%s - %s: async_turn_off",
                 self._charger_id,
                 self._identifier,
-                self._attr_name,
             )
-            value = self._entity_cfg.get("invert", False)
+            value = self.entity_description.invert
             await async_SetChargerProp(self._charger, self._identifier, value)
         except Exception:
             _LOGGER.exception(

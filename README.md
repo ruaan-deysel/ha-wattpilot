@@ -3,6 +3,9 @@
 [![HACS Integration](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/custom-components/hacs)
 [![GitHub Release](https://img.shields.io/github/release/ruaan-deysel/ha-wattpilot.svg)](https://github.com/ruaan-deysel/ha-wattpilot/releases)
 [![License](https://img.shields.io/github/license/ruaan-deysel/ha-wattpilot.svg)](LICENSE)
+[![CI](https://github.com/ruaan-deysel/ha-wattpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/ruaan-deysel/ha-wattpilot/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ruaan-deysel/ha-wattpilot/branch/master/graph/badge.svg)](https://codecov.io/gh/ruaan-deysel/ha-wattpilot)
+[![Quality Scale](https://img.shields.io/badge/quality%20scale-silver-C0C0C0.svg)](https://developers.home-assistant.io/docs/integration_quality_scale_index/)
 
 Custom Home Assistant integration for monitoring and controlling Fronius Wattpilot EV chargers using a reverse-engineered WebSocket API.
 
@@ -53,11 +56,13 @@ Custom Home Assistant integration for monitoring and controlling Fronius Wattpil
 ## Entities
 
 ### Controls
+
 - **Charging Mode**: Switch between Default, Eco, and Next Trip modes
 - **Force State**: Control charging (Neutral, Off, On)
 - **Cable Lock**: Lock/unlock the charging cable
 
 ### Sensors
+
 - **Car State**: Vehicle connection and charging status
 - **Power**: Current charging power (W/kW)
 - **Current**: Charging current per phase (A)
@@ -66,6 +71,7 @@ Custom Home Assistant integration for monitoring and controlling Fronius Wattpil
 - **Temperature**: Charger temperature readings
 
 ### Diagnostics
+
 - **Connection Status**: Online/offline state
 - **Firmware Version**: Current firmware information
 - **Error Codes**: Active error states
@@ -101,16 +107,19 @@ See [packages/wattpilot/](packages/wattpilot/) for complete automation examples.
 ### Common Issues
 
 **Cannot Connect (Local)**
+
 - Verify the charger's IP address is correct
 - Ensure Home Assistant can reach the charger on your network
 - Check that the password matches (found in the Wattpilot app)
 
 **Cannot Connect (Cloud)**
+
 - Verify your Fronius account credentials
 - Ensure the serial number is correct
 - Check your internet connection
 
 **Entities Not Updating**
+
 - Check connection status in logs
 - Verify WebSocket connection is active
 - Try reloading the integration
@@ -129,11 +138,13 @@ logger:
 ## Screenshots
 
 ### Device View
+
 ![screenshot of Wattpilot Device](doc/device_view1.jpg)
 ![screenshot of Wattpilot Device](doc/device_view2.jpg)
 ![screenshot of Wattpilot Device](doc/device_view3.jpg)
 
 ### Service Call
+
 ![screenshot of Next Trip service](doc/service_view1.jpg)
 
 ## Contributing
@@ -171,7 +182,7 @@ This integration is not officially associated with or endorsed by Fronius. Froni
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2023 @mk-maddin - Original Author  
+Copyright (c) 2023 @mk-maddin - Original Author
 Copyright (c) 2024-2025 @ruaan-deysel - Current Maintainer
 
 See [NOTICE](NOTICE) file for additional attribution information.

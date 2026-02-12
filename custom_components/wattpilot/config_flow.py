@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import Any, Final
 
@@ -35,13 +36,20 @@ REDACT_CONFIG = {CONF_PASSWORD}
 _LOGGER: Final = logging.getLogger(__name__)
 
 
+def _validate_ip(value: str) -> bool:
+    """Return True if value is a valid IPv4/IPv6 address."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
+
+
 class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Custom config flow."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
     data: dict[str, Any]
-    loaded_platforms: list[str] = []
 
     def __init__(self) -> None:
         """Initialize."""
@@ -121,6 +129,13 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     DOMAIN,
                     async_redact_data(user_input, REDACT_CONFIG),
                 )
+                if not _validate_ip(user_input.get(CONF_IP_ADDRESS, "")):
+                    errors[CONF_IP_ADDRESS] = "invalid_ip"
+                    return self.async_show_form(
+                        step_id=CONF_LOCAL,
+                        data_schema=LOCAL_SCHEMA,
+                        errors=errors,
+                    )
                 user_input[CONF_CONNECTION] = CONF_LOCAL
                 self.data = user_input
                 return await self.async_step_final()
@@ -185,7 +200,9 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_FRIENDLY_NAME, DEFAULT_NAME
         )
         await self.async_set_unique_id(unique_id)
-        self._abort_if_unique_id_configured()
+        abort_result = self._abort_if_unique_id_configured()
+        if abort_result is not None:
+            return abort_result
 
         title = self.data.get(
             CONF_FRIENDLY_NAME, self.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
@@ -195,20 +212,19 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
+        config_entry: config_entries.ConfigEntry,  # noqa: ARG004
     ) -> OptionsFlowHandler:
         """Get the options flow handler."""
         _LOGGER.debug("%s: ConfigFlowHandler - async_get_options_flow", DOMAIN)
-        return OptionsFlowHandler(config_entry)
+        return OptionsFlowHandler()
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handles options flow for the component."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self) -> None:
         """Initialize options flow."""
-        _LOGGER.debug("%s - OptionsFlowHandler: __init__: %s", DOMAIN, config_entry)
-        self._config_entry = config_entry
+        _LOGGER.debug("%s - OptionsFlowHandler: __init__", DOMAIN)
         self.data: dict[str, Any] = {}
 
     async def async_step_init(
@@ -219,12 +235,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             "%s - OptionsFlowHandler: async_step_init: %s", DOMAIN, user_input
         )
         try:
-            if self._config_entry.source == config_entries.SOURCE_USER:
+            if self.config_entry.source == config_entries.SOURCE_USER:
                 return await self.async_step_config_connection()
             _LOGGER.warning(
                 "%s - OptionsFlowHandler: async_step_init: source not supported: %s",
                 DOMAIN,
-                self._config_entry.source,
+                self.config_entry.source,
             )
             return self.async_abort(reason="not_supported")
         except Exception as e:
@@ -282,7 +298,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
         try:
             options_local_schema = await async_get_OPTIONS_LOCAL_SCHEMA(
-                self._config_entry.data
+                self.config_entry.data
             )
             if not user_input:
                 return self.async_show_form(
@@ -292,6 +308,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 "%s - OptionsFlowHandler: async_step_config_local - user_input",
                 DOMAIN,
             )
+            if not _validate_ip(user_input.get(CONF_IP_ADDRESS, "")):
+                return self.async_show_form(
+                    step_id="config_local",
+                    data_schema=options_local_schema,
+                    errors={CONF_IP_ADDRESS: "invalid_ip"},
+                )
             user_input[CONF_CONNECTION] = CONF_LOCAL
             self.data.update(user_input)
             _LOGGER.debug(
@@ -321,7 +343,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
         try:
             options_cloud_schema = await async_get_OPTIONS_CLOUD_SCHEMA(
-                self._config_entry.data
+                self.config_entry.data
             )
             if not user_input:
                 return self.async_show_form(
@@ -357,12 +379,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             title = self.data.get(
                 CONF_FRIENDLY_NAME, self.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
             )
-            if self._config_entry.state is config_entries.ConfigEntryState.SETUP_ERROR:
+            if self.config_entry.state is config_entries.ConfigEntryState.SETUP_ERROR:
                 _LOGGER.debug(
                     "%s - OptionsFlowHandler: in errorstate - trigger execution of options_update_listener",
                     DOMAIN,
                 )
-                await options_update_listener(self.hass, self._config_entry)
+                await options_update_listener(self.hass, self.config_entry)
             return self.async_create_entry(title=title, data=self.data)
         except Exception as e:
             _LOGGER.error(

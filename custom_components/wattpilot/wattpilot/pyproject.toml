@@ -1,9 +1,0 @@
-[build-system]
-requires = [
-    "pyyaml>=5.4.1",
-    "setuptools>=42",
-    "wheel",
-    "paho-mqtt",
-    "bcrypt>=5.0.0"
-]
-build-backend = "setuptools.build_meta"

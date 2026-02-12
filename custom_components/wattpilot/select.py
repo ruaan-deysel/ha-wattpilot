@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-import aiofiles
-import yaml
 from homeassistant.components.select import SelectEntity
-from homeassistant.const import STATE_UNKNOWN
+from homeassistant.const import (
+    CONF_FRIENDLY_NAME,
+    CONF_IP_ADDRESS,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import HomeAssistant
 
-from .entities import ChargerPlatformEntity
+from .const import DEFAULT_NAME
+from .descriptions import (
+    SELECT_DESCRIPTIONS,
+    SOURCE_PROPERTY,
+    WattpilotSelectEntityDescription,
+)
+from .entities import ChargerPlatformEntity, filter_descriptions
 from .utils import async_SetChargerProp
 
 if TYPE_CHECKING:
@@ -32,100 +38,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up the select platform."""
     _LOGGER.debug("Setting up %s platform entry: %s", PLATFORM, entry.entry_id)
+
+    charger = entry.runtime_data.charger
+    push_entities = entry.runtime_data.push_entities
+    charger_id = str(
+        entry.data.get(
+            CONF_FRIENDLY_NAME, entry.data.get(CONF_IP_ADDRESS, DEFAULT_NAME)
+        )
+    )
+
+    descriptions = filter_descriptions(SELECT_DESCRIPTIONS, charger, entry, charger_id)
+
     entities: list[ChargerSelect] = []
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Reading static yaml configuration",
-            entry.entry_id,
-            PLATFORM,
-        )
-        yaml_path = Path(__file__).parent / f"{PLATFORM}.yaml"
-        async with aiofiles.open(yaml_path) as y:
-            yaml_cfg = yaml.safe_load(await y.read())
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        charger = entry.runtime_data.charger
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting charger instance from runtime_data failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    try:
-        _LOGGER.debug(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data",
-            entry.entry_id,
-            PLATFORM,
-        )
-        push_entities = entry.runtime_data.push_entities
-    except Exception as e:
-        _LOGGER.error(
-            "%s - async_setup_entry %s: Getting push entities dict from runtime_data failed: %s (%s.%s)",
-            entry.entry_id,
-            PLATFORM,
-            str(e),
-            e.__class__.__module__,
-            type(e).__name__,
-        )
-        return
-
-    for entity_cfg in yaml_cfg[PLATFORM]:
-        try:
-            entity_cfg["source"] = "property"
-            if "id" not in entity_cfg or entity_cfg["id"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no id: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            if "source" not in entity_cfg or entity_cfg["source"] is None:
-                _LOGGER.error(
-                    "%s - async_setup_entry %s: Invalid yaml configuration - no source: %s",
-                    entry.entry_id,
-                    PLATFORM,
-                    entity_cfg,
-                )
-                continue
-            entity = ChargerSelect(hass, entry, entity_cfg, charger)
-            if getattr(entity, "_init_failed", True):
-                continue
-            entities.append(entity)
-            if entity._source == "property":
-                push_entities[entity._identifier] = entity
-            await asyncio.sleep(0)
-        except Exception as e:
-            _LOGGER.error(
-                "%s - async_setup_entry %s: Reading static yaml configuration failed: %s (%s.%s)",
-                entry.entry_id,
-                PLATFORM,
-                str(e),
-                e.__class__.__module__,
-                type(e).__name__,
-            )
-            return
+    for desc in descriptions:
+        entity = ChargerSelect(hass, entry, desc, charger)
+        if getattr(entity, "_init_failed", True):
+            continue
+        entities.append(entity)
+        if entity._source == SOURCE_PROPERTY:
+            push_entities[entity._identifier] = entity
 
     _LOGGER.info(
         "%s - async_setup_entry: setup %s %s entities",
@@ -133,23 +64,25 @@ async def async_setup_entry(
         len(entities),
         PLATFORM,
     )
-    if not entities:
-        return
-    async_add_entities(entities)
+    if entities:
+        async_add_entities(entities)
 
 
 class ChargerSelect(ChargerPlatformEntity, SelectEntity):
     """Select class for Fronius Wattpilot integration."""
 
     _state_attr = "_attr_current_option"
+    entity_description: WattpilotSelectEntityDescription
 
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
-        self._opt_identifier = self._entity_cfg.get("options", None)
-        if isinstance(self._opt_identifier, dict):
-            self._opt_dict = self._opt_identifier
-        elif self._opt_identifier is not None:
-            self._opt_dict = getattr(self._charger, self._opt_identifier, STATE_UNKNOWN)
+        desc = self.entity_description
+        if isinstance(desc.select_options, dict):
+            self._opt_dict = desc.select_options
+        elif desc.options_attribute is not None:
+            self._opt_dict = getattr(
+                self._charger, desc.options_attribute, STATE_UNKNOWN
+            )
         else:
             self._opt_dict = STATE_UNKNOWN
         if isinstance(self._opt_dict, dict):
@@ -215,9 +148,7 @@ class ChargerSelect(ChargerPlatformEntity, SelectEntity):
                 self._identifier,
                 key,
             )
-            await async_SetChargerProp(
-                self._charger, self._identifier, key, force_type=self._set_type
-            )
+            await async_SetChargerProp(self._charger, self._identifier, key)
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: async_select_option failed: %s (%s.%s)",
