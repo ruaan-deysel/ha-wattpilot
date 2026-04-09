@@ -1029,6 +1029,6 @@ TIME_DESCRIPTIONS: list[WattpilotTimeEntityDescription] = [
         key="next_trip_time",
         charger_key="ftt",
         translation_key="next_trip_time",
-        description_text="Planned departure time for the next trip (seconds since midnight)",
+        description_text="Planned departure time for the next trip",
     ),
 ]
