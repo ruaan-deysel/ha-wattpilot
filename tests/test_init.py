@@ -28,6 +28,7 @@ class TestIntegrationSetup:
             "select",
             "sensor",
             "switch",
+            "time",
             "update",
         ]
         assert sorted(SUPPORTED_PLATFORMS) == sorted(expected_platforms)

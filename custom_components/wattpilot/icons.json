@@ -200,6 +200,11 @@
       "firmware_update": {
         "default": "mdi:update"
       }
+    },
+    "time": {
+      "next_trip_time": {
+        "default": "mdi:calendar-clock"
+      }
     }
   },
   "services": {
