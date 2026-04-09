@@ -54,8 +54,22 @@
     },
     "nrg": {
       "value": [
-        230.0, 231.0, 229.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3450.0,
-        0.0, 0.0, 0.0, 0.0
+        230.0,
+        231.0,
+        229.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        3450.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
       ],
       "description": "Energy array",
       "indices": {
@@ -83,9 +97,12 @@
       "unit": "dBm"
     },
     "tma": {
-      "value": [25.5, 26.0],
+      "value": [
+        25.5,
+        26.0
+      ],
       "description": "Temperature array",
-      "unit": "°C"
+      "unit": "\u00b0C"
     },
     "err": {
       "value": 0,
@@ -215,6 +232,10 @@
         "2": "error",
         "3": "off"
       }
+    },
+    "ftt": {
+      "value": 25200,
+      "description": "Planned departure time for next trip (seconds since midnight)"
     }
   },
   "attributes": {

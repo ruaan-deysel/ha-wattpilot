@@ -377,6 +377,11 @@
       "firmware_update": {
         "name": "Firmware Update"
       }
+    },
+    "time": {
+      "next_trip_time": {
+        "name": "Next Trip Time"
+      }
     }
   },
   "exceptions": {

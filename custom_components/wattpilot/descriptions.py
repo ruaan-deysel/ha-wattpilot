@@ -21,6 +21,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.components.switch import SwitchEntityDescription
+from homeassistant.components.time import TimeEntityDescription
 from homeassistant.components.update import (
     UpdateDeviceClass,
     UpdateEntityDescription,
@@ -1011,5 +1012,23 @@ UPDATE_DESCRIPTIONS: list[WattpilotUpdateEntityDescription] = [
         id_installed="fwv",
         id_trigger="oct",
         description_text="Install firmware update available",
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
+# Time descriptions
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True, kw_only=True)
+class WattpilotTimeEntityDescription(WattpilotDescriptionMixin, TimeEntityDescription):
+    """Describes a Wattpilot time entity."""
+
+
+TIME_DESCRIPTIONS: list[WattpilotTimeEntityDescription] = [
+    WattpilotTimeEntityDescription(
+        key="next_trip_time",
+        charger_key="ftt",
+        translation_key="next_trip_time",
+        description_text="Planned departure time for the next trip (seconds since midnight)",
     ),
 ]

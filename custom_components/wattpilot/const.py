@@ -11,6 +11,7 @@ SUPPORTED_PLATFORMS: Final = [
     "select",
     "sensor",
     "switch",
+    "time",
     "update",
 ]
 
