@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2026.4.0] - 2026-04-12
+
+### Changed
+
+- Updated dependency baselines to latest supported releases for security and compatibility:
+  - `homeassistant>=2026.4.1`
+  - `pytest>=9.0.0`
+  - `pytest-asyncio>=1.3.0`
+  - `pytest-cov>=7.0.0`
+  - `pytest-homeassistant-custom-component>=0.13.322`
+- Raised Python baseline to `>=3.14.2` to remove older dependency resolution branches and avoid version pinning blockers.
+- Updated development container image to Python 3.14 to align with the project runtime baseline.
+
+### Fixed
+
+- Resolved dependency-resolution blockers caused by older pinned transitive versions in the Python 3.13 dependency path.
+- Unblocked upgrades to latest secure dependency branches by aligning runtime, test tooling, and Home Assistant versions.
+- Addressed [#12](https://github.com/ruaan-deysel/ha-wattpilot/issues/12): Error Validating platform state 100055.
+- Addressed [#11](https://github.com/ruaan-deysel/ha-wattpilot/issues/11): expose next trip time.
+
 ## [2026.2.0] - 2026-02-11
 
 ### Added

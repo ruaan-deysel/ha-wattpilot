@@ -23,4 +23,9 @@ fi
 uv sync --group dev
 
 # Install pre-commit hooks
-uv run pre-commit install
+if git config --get core.hooksPath > /dev/null; then
+    echo "Skipping pre-commit hook installation because git core.hooksPath is set."
+    echo "Run 'uv run pre-commit run --all-files' manually to execute checks."
+else
+    uv run pre-commit install
+fi

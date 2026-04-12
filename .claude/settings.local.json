@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest:*)",
+      "Bash(python -m pytest tests/test_switch.py tests/test_number.py tests/test_select.py tests/test_update.py -v --tb=short)",
+      "Bash(python -m pytest:*)",
+      "Bash(python3:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(uv run ruff check:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: achieve 94% test coverage with comprehensive test suite\n\nAdded 371 comprehensive tests across all integration components to\nimprove test coverage from 31% to 94% \\(exceeding the 90% requirement\\).\n\nNew test files:\n- tests/test_button.py: Button platform \\(12 tests, 97% coverage\\)\n- tests/test_switch.py: Switch platform \\(22 tests, 99% coverage\\)\n- tests/test_number.py: Number platform \\(22 tests, 97% coverage\\)\n- tests/test_select.py: Select platform \\(19 tests, 91% coverage\\)\n- tests/test_update.py: Update platform \\(23 tests, 96% coverage\\)\n- tests/test_utils.py: Utility functions \\(50+ tests, 99% coverage\\)\n- tests/test_services.py: Service handlers \\(40+ tests, 100% coverage\\)\n- tests/test_entities.py: Entity base class \\(80+ tests, 95% coverage\\)\n- tests/test_coverage_completion.py: Edge cases \\(32 tests\\)\n- tests/test_coverage_platforms.py: Platform edge cases \\(25 tests\\)\n\nExpanded test files:\n- tests/test_config_flow.py: Complete config flow coverage \\(60+ tests, 98%\\)\n- tests/test_init.py: Integration setup/teardown \\(100+ tests, 68%\\)\n- tests/conftest.py: Enhanced fixtures with runtime_data support\n\nCoverage by module:\n- 100% coverage: sensor.py, services.py, diagnostics.py, descriptions.py, const.py, types.py\n- 95%+ coverage: utils.py \\(99%\\), switch.py \\(99%\\), config_flow.py \\(98%\\), button.py \\(97%\\)\n- Overall: 94% \\(1,325/1,405 statements covered\\)\n\nTest improvements:\n- Comprehensive error handling tests\n- Edge case coverage \\(None values, missing attributes, exceptions\\)\n- State validation tests\n- Entity lifecycle and availability tests\n- Service parameter validation\n- Version parsing and firmware filtering\n- Mock improvements for async/sync callbacks\n\nConfiguration updates:\n- .ruff.toml: Added test-specific linting ignores\n- pyproject.toml: Updated for test configuration\n\nAll 371 tests passing with comprehensive platform coverage.\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)"
+    ]
+  }
+}

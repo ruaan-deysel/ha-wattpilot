@@ -267,7 +267,14 @@ class TestAsyncSetupEntry:
         )
 
         # Should raise ConfigEntryNotReady when connection fails
-        with pytest.raises(ConfigEntryNotReady):
+        with (
+            patch(
+                "custom_components.wattpilot.async_ConnectCharger",
+                side_effect=RuntimeError("Connection failed"),
+            ),
+            patch("custom_components.wattpilot._ensure_services_registered"),
+            pytest.raises(ConfigEntryNotReady),
+        ):
             await async_setup_entry(hass, entry)
 
     @pytest.mark.asyncio
@@ -297,7 +304,7 @@ class TestAsyncSetupEntry:
 
         with (
             patch(
-                "custom_components.wattpilot.utils.async_ConnectCharger",
+                "custom_components.wattpilot.async_ConnectCharger",
                 return_value=None,
             ),
             patch("custom_components.wattpilot._ensure_services_registered"),
