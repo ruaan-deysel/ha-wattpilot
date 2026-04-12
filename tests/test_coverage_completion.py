@@ -50,7 +50,7 @@ class TestInitVersionCheck:
             patch("custom_components.wattpilot.async_get_integration"),
             patch("custom_components.wattpilot._ensure_services_registered"),
             patch(
-                "custom_components.wattpilot.utils.async_ConnectCharger",
+                "custom_components.wattpilot.async_ConnectCharger",
                 side_effect=RuntimeError("Connection error"),
             ),
             pytest.raises(ConfigEntryNotReady) as exc_info,
@@ -94,21 +94,21 @@ class TestInitVersionCheck:
             ),
             patch("custom_components.wattpilot._ensure_services_registered"),
             patch(
-                "custom_components.wattpilot.utils.async_ConnectCharger",
+                "custom_components.wattpilot.async_ConnectCharger",
                 return_value=mock_charger,
             ),
             patch(
                 "custom_components.wattpilot.WattpilotCoordinator.async_config_entry_first_refresh",
                 new_callable=AsyncMock,
             ),
-            patch(
-                "custom_components.wattpilot.utils.async_DisconnectCharger",
+            patch.object(
+                hass.config_entries,
+                "async_forward_entry_setups",
                 new_callable=AsyncMock,
             ),
-            pytest.raises(Exception),  # Expected to fail at later stage
         ):
-            # Should log debug message about unknown version
-            await async_setup_entry(hass, entry)
+            # Should complete setup while logging unknown version warning.
+            assert await async_setup_entry(hass, entry) is True
 
 
 class TestUnloadDisconnectErrors:
