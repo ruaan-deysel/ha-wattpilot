@@ -15,7 +15,7 @@ jobs:
       version_changed: ${{ steps.check_tag.outputs.version_changed }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -46,7 +46,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract changelog for version
         id: changelog
