@@ -38,7 +38,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "pytest-homeassistant-custom-component>=0.13.322",
     "ruff>=0.15.10",
-    "pre-commit>=4.5.1",
+    "pre-commit>=4.6.0",
     "codespell>=2.4.2",
     "yamllint>=1.38.0",
 ]
