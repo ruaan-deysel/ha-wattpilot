@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "wattpilot-api>=1.2.0",
-    "packaging>=26.1",
+    "packaging>=26.2",
 ]
 
 [project.urls]
