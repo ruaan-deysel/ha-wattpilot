@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2026.6.0] - 2026-05-30
+
+### Changed
+
+- Updated integration requirements to the latest supported releases:
+  - `wattpilot-api>=1.4.0` (was `>=1.2.0`)
+  - `packaging>=26.2` (was `>=24.0`)
+
+### Fixed
+
+- Resolved an unsatisfiable dependency constraint where `pytest-asyncio>=1.4.0` conflicted with the `pytest-asyncio==1.3.0` pin from `pytest-homeassistant-custom-component`, which had left `uv.lock` out of sync.
+
 ## [2026.4.0] - 2026-04-12
 
 ### Changed
