@@ -11,6 +11,7 @@ from homeassistant.const import (
     CONF_IP_ADDRESS,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import DEFAULT_NAME
 from .descriptions import (
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = logging.getLogger(__name__)
 PLATFORM = "button"
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -77,6 +79,29 @@ class ChargerButton(ChargerPlatformEntity, ButtonEntity):
                 self._identifier,
             )
             self._init_failed = True
+
+    async def async_added_to_hass(self) -> None:
+        """
+        Discard invalid restored state from older integration versions.
+
+        Older versions wrote the raw charger property value (e.g. frc=0/1/2)
+        into the button state, which HA restores and renders as a bogus
+        'pressed N days ago' timestamp.
+        """
+        await super().async_added_to_hass()
+        state = self.state
+        if state is not None and dt_util.parse_datetime(state) is None:
+            _LOGGER.debug(
+                "%s - %s: discarding invalid restored button state: %s",
+                self._charger_id,
+                self._identifier,
+                state,
+            )
+            # ButtonEntity caches its state; reset both the cache and the
+            # underlying last-pressed value (name-mangled private attribute).
+            self.__dict__.pop("state", None)
+            self._ButtonEntity__last_pressed_isoformat = None
+            self.async_write_ha_state()
 
     async def async_local_poll(self) -> None:
         """Async: Poll the latest data and states from the entity."""

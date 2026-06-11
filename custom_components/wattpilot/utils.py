@@ -96,7 +96,7 @@ async def async_GetChargerProp(
             )
             return default
         if identifier is None or identifier not in charger.all_properties:
-            _LOGGER.error(
+            _LOGGER.debug(
                 "%s - async_GetChargerProp: Charger does not have property: %s",
                 DOMAIN,
                 identifier,
@@ -121,7 +121,7 @@ def GetChargerProp(
             )
             return default
         if identifier is None or identifier not in charger.all_properties:
-            _LOGGER.error(
+            _LOGGER.debug(
                 "%s - GetChargerProp: Charger does not have property: %s",
                 DOMAIN,
                 identifier,

@@ -77,8 +77,8 @@ rules:
     status: done
     comment: Entities use appropriate entity_category assignments.
   entity-disabled-by-default:
-    status: todo
-    comment: No entities disabled by default.
+    status: done
+    comment: Diagnostic/noisy entities use entity_registry_enabled_default=False.
   exception-translations:
     status: done
     comment: ConfigEntryNotReady uses translation_key placeholders.
@@ -90,7 +90,7 @@ rules:
     comment: Coordinator tracks availability with error counting.
   parallel-updates:
     status: done
-    comment: Uses default HA parallel updates behavior.
+    comment: PARALLEL_UPDATES set in every platform module (0 for sensor, 1 for action platforms).
   reauthentication-flow:
     status: todo
     comment: No async_step_reauth implemented yet.

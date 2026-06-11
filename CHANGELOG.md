@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2026.6.1] - 2026-06-12
+
+### Fixed
+
+- Start/Stop/Force-charging and Restart buttons no longer report being pressed thousands of days ago. The raw charger property value (e.g. `frc=0/1/2`) was written into the button state, which Home Assistant restored and rendered as a bogus timestamp. Stateless (button) entities no longer receive charger property state, and an invalid restored "last pressed" state is discarded on startup.
+- The `local_time` diagnostic sensor (`loc`) now converts the charger's time string into a timezone-aware datetime, preventing a `ValueError` from its `timestamp` device class when the entity is enabled.
+- Firmware version constraints now fall back to the installed firmware property (`fwv`) instead of the latest available online version (`onv`) when the API client does not expose a `firmware` attribute.
+- Probing for charger properties that a device does not support no longer spams the Home Assistant log with ERROR messages during setup (now logged at debug level).
+
+### Changed
+
+- Raised the minimum supported Home Assistant version in `hacs.json` to 2026.5.0 (integration requires Python 3.14).
+- `PARALLEL_UPDATES` is now declared in every entity platform module (0 for sensors, 1 for action platforms) as required by the Home Assistant integration quality scale; the previous declaration in `entities.py` had no effect.
+
 ## [2026.6.0] - 2026-05-30
 
 ### Changed

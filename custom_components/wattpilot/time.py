@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = logging.getLogger(__name__)
 PLATFORM = "time"
+PARALLEL_UPDATES = 1
 
 _SECONDS_PER_HOUR: Final = 3600
 _SECONDS_PER_MINUTE: Final = 60

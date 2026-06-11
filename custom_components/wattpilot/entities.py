@@ -19,6 +19,7 @@ from .const import (
 from .descriptions import (
     SOURCE_ATTRIBUTE,
     SOURCE_NAMESPACELIST,
+    SOURCE_NONE,
     SOURCE_PROPERTY,
     WattpilotDescriptionMixin,
 )
@@ -32,8 +33,6 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = logging.getLogger(__name__)
 
-PARALLEL_UPDATES = 1
-
 
 def check_firmware_supported(
     charger: Any,
@@ -44,7 +43,9 @@ def check_firmware_supported(
     """Return whether the current charger firmware satisfies the constraint."""
     if firmware_constraint is None:
         return True
-    fw = getattr(charger, "firmware", GetChargerProp(charger, "onv", None))
+    fw = getattr(charger, "firmware", None)
+    if fw is None:
+        fw = GetChargerProp(charger, "fwv", None)
     if fw is None:
         _LOGGER.error(
             "%s - %s: check_firmware_supported: Cannot identify charger firmware",
@@ -119,7 +120,9 @@ def check_variant_supported(
     """Return whether the current charger variant matches the filter."""
     if variant_filter is None:
         return True
-    variant = getattr(charger, "variant", GetChargerProp(charger, "var", 11))
+    variant = getattr(charger, "variant", None)
+    if variant is None:
+        variant = GetChargerProp(charger, "var", 11)
     result = str(variant).upper() == str(variant_filter).upper()
     _LOGGER.debug(
         "%s - %s: check_variant_supported (%s=%s -> %s)",
@@ -300,11 +303,14 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
 
             self._attributes: dict[str, Any] = {}
             self._attributes["description"] = description.description_text
-            setattr(
-                self,
-                self._state_attr,
-                description.default_state,
-            )
+            # Stateless entities (e.g. buttons) manage their own state via the
+            # platform base class - writing to it would shadow that state.
+            if self._source != SOURCE_NONE:
+                setattr(
+                    self,
+                    self._state_attr,
+                    description.default_state,
+                )
 
             self._init_platform_specific()
 
@@ -334,7 +340,11 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
         stay "Unknown" until the charger pushes a property change event.
         """
         await super().async_added_to_hass()
-        if self._init_failed or self.coordinator.data is None:
+        if (
+            self._init_failed
+            or self._source == SOURCE_NONE
+            or self.coordinator.data is None
+        ):
             return
         value = self.coordinator.data.get(self._identifier)
         if value is not None:
@@ -441,6 +451,8 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
     @property
     def should_poll(self) -> bool:
         """Return True if polling is needed."""
+        if self._source == SOURCE_NONE:
+            return False
         if self._source == SOURCE_ATTRIBUTE:
             return True
         if self._source == SOURCE_NAMESPACELIST:
@@ -560,6 +572,8 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
             _LOGGER.debug(
                 "%s - %s: async_local_poll", self._charger_id, self._identifier
             )
+            if self._source == SOURCE_NONE:
+                return
             if self._source == SOURCE_ATTRIBUTE:
                 state = getattr(self._charger, self._identifier, self._default_state)
             elif self._source == SOURCE_NAMESPACELIST:
@@ -629,6 +643,8 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
             _LOGGER.debug(
                 "%s - %s: async_local_push", self._charger_id, self._identifier
             )
+            if self._source == SOURCE_NONE:
+                return
             if self._source == SOURCE_ATTRIBUTE:
                 pass
             elif self._source == SOURCE_NAMESPACELIST:

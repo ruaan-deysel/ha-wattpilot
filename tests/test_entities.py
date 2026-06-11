@@ -146,7 +146,7 @@ class TestFilterHelpers:
     ) -> None:
         """Test firmware check reads from property when attribute missing."""
         charger = MagicMock(spec=[])  # Empty spec so firmware doesn't exist
-        charger.all_properties = {"onv": "40.7"}
+        charger.all_properties = {"fwv": "40.7"}
 
         with patch("custom_components.wattpilot.entities.GetChargerProp") as mock_get:
             mock_get.return_value = "40.7"
@@ -154,7 +154,7 @@ class TestFilterHelpers:
                 charger, ">=40.0", "test_charger", "test_prop"
             )
             assert result is True
-            mock_get.assert_called_once_with(charger, "onv", None)
+            mock_get.assert_called_once_with(charger, "fwv", None)
 
     def test_check_variant_supported_no_filter(self, mock_charger: MagicMock) -> None:
         """Test variant check with no filter."""

@@ -1,0 +1,2 @@
+- [Dev verification setup](dev-verification-setup.md) — how to run/verify the HA dev instance (localhost:8123, dev/dev, live charger)
+- [pytest-asyncio pin constraint](pytest-asyncio-pin-constraint.md) — don't bump pytest-asyncio above what pytest-homeassistant-custom-component pins

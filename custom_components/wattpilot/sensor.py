@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.components.sensor import (
+    SensorDeviceClass,
     SensorEntity,
 )
 from homeassistant.components.sensor.const import UNIT_CONVERTERS
@@ -16,6 +17,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import DEFAULT_NAME
 from .descriptions import (
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = logging.getLogger(__name__)
 PLATFORM = "sensor"
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
@@ -108,6 +111,20 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
     ) -> Any | None:
         """Async: Validate the given state for sensor specific requirements."""
         try:
+            if self.entity_description.device_class == SensorDeviceClass.TIMESTAMP:
+                # Timestamp sensors must provide a datetime object, never a
+                # string ("2022-03-06 12:27:42.504 +01:00" from the charger).
+                if state is None or state == "None":
+                    return None
+                if isinstance(state, str):
+                    state = dt_util.parse_datetime(state) or dt_util.parse_datetime(
+                        state.replace(" +", "+").replace(" -", "-")
+                    )
+                if state is not None:
+                    # HA requires timezone-aware datetimes; assume HA's
+                    # timezone if the charger value is naive.
+                    state = dt_util.as_local(state)
+                return state
             if state is None or state == "None":
                 # For sensors with a numeric device_class and unit, return None
                 # so HA treats it as "unknown" without raising ValueError.

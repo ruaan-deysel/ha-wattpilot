@@ -315,6 +315,86 @@ class TestChargerButton:
             await button.async_press()
 
     @pytest.mark.asyncio
+    async def test_async_local_push_does_not_write_state(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_coordinator: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test pushed charger property values never become the button state."""
+        from custom_components.wattpilot.button import ChargerButton
+
+        desc = self._make_button_description()
+        entry = self._make_entry(
+            hass, mock_charger, mock_coordinator, mock_config_entry_data
+        )
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp", return_value="frc"
+        ):
+            button = ChargerButton(hass, entry, desc, mock_charger)
+            with patch.object(button, "async_write_ha_state") as mock_write:
+                await button.async_local_push(1)
+            assert "state" not in button.__dict__
+            assert button.state is None
+            mock_write.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_invalid_restored_state_discarded(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_coordinator: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test bogus restored state (raw frc value) is discarded on add."""
+        from custom_components.wattpilot.button import ChargerButton
+
+        desc = self._make_button_description()
+        entry = self._make_entry(
+            hass, mock_charger, mock_coordinator, mock_config_entry_data
+        )
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp", return_value="frc"
+        ):
+            button = ChargerButton(hass, entry, desc, mock_charger)
+            # Simulate RestoreEntity restoring a bogus state from old versions
+            button._ButtonEntity__last_pressed_isoformat = "0"
+            with patch.object(button, "async_write_ha_state") as mock_write:
+                await button.async_added_to_hass()
+            assert button.state is None
+            mock_write.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_valid_restored_state_kept(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_coordinator: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test a valid restored last-pressed timestamp is preserved."""
+        from custom_components.wattpilot.button import ChargerButton
+
+        desc = self._make_button_description()
+        entry = self._make_entry(
+            hass, mock_charger, mock_coordinator, mock_config_entry_data
+        )
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp", return_value="frc"
+        ):
+            button = ChargerButton(hass, entry, desc, mock_charger)
+            iso = "2026-06-01T10:00:00+00:00"
+            button._ButtonEntity__last_pressed_isoformat = iso
+            with patch.object(button, "async_write_ha_state") as mock_write:
+                await button.async_added_to_hass()
+            assert button.state == iso
+            mock_write.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_async_local_poll_does_nothing(
         self,
         hass: HomeAssistant,
