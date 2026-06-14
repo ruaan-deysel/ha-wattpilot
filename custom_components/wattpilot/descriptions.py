@@ -101,7 +101,15 @@ SENSOR_DESCRIPTIONS: list[WattpilotSensorEntityDescription] = [
         charger_key="car_connected",
         source=SOURCE_ATTRIBUTE,
         translation_key="car_connected",
-        description_text="State of the car plug - values are: 'no car', 'charging', 'ready', 'complete'",
+        enum={
+            0: "Unknown",
+            1: "Idle",
+            2: "Charging",
+            3: "Wait Car",
+            4: "Complete",
+            5: "Error",
+        },
+        description_text="Charging state reported by the car plug (same as Car State but sourced from the API client attribute). Values: 'Unknown', 'Idle', 'Charging', 'Wait Car', 'Complete', 'Error'",
     ),
     # --- Namespace list sensors (ID chips/cards) ---
     *[
@@ -218,6 +226,7 @@ SENSOR_DESCRIPTIONS: list[WattpilotSensorEntityDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement="Wh",
+        suggested_display_precision=2,
         default_state=0,
         description_text="Total energy charged (lifetime). Use this sensor for Home Assistant Energy Dashboard device consumption tracking.",
     ),
@@ -428,6 +437,7 @@ SENSOR_DESCRIPTIONS: list[WattpilotSensorEntityDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement="Wh",
+        suggested_display_precision=2,
         default_state=0,
         description_text="Energy charged since car connected (resets when car disconnects)",
     ),

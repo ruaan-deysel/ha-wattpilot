@@ -10,7 +10,7 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.components.sensor.const import UNIT_CONVERTERS
+from homeassistant.components.sensor.const import UNIT_CONVERTERS, SensorStateClass
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
@@ -148,6 +148,20 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
                     state,
                     self._state_enum,
                 )
+            # For TOTAL_INCREASING sensors, clamp negative values, apply
+            # precision rounding, and enforce monotonicity to prevent
+            # floating-point noise from causing HA recorder warnings.
+            if (
+                self.entity_description.state_class == SensorStateClass.TOTAL_INCREASING
+                and isinstance(state, int | float)
+            ):
+                state = max(0, state)
+                precision = self.entity_description.suggested_display_precision
+                if precision is not None:
+                    state = round(state, precision)
+                # Never report a value lower than what was last stored.
+                if isinstance(self._attr_native_value, int | float):
+                    state = max(state, self._attr_native_value)
             if self._attr_native_unit_of_measurement is not None:
                 self._attr_native_value = state
             return state

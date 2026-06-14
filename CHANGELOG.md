@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2026.6.2] - 2026-06-14
+
+### Fixed
+
+- `session_energy` (`wh`) and `total_energy` (`eto`) sensors no longer trigger Home Assistant recorder warnings about `TOTAL_INCREASING` state class violations:
+  - Negative values (caused by measurement noise from the charger, e.g. `-0.003 Wh`) are now clamped to `0` before being reported to HA (closes #62).
+  - Tiny floating-point decrements (e.g. `7826.313309` → `7826.31043`) caused by rounding errors are eliminated by rounding to 2 decimal places before reporting (closes #61).
+  - A monotonicity guard now prevents any rounded value from being reported lower than the previously reported value, ensuring strict non-decreasing behavior required by `TOTAL_INCREASING`.
+- Added `suggested_display_precision=2` to both energy sensor descriptions for consistent display rounding in the UI.
+- `car_connected` sensor now displays human-readable labels (e.g. `Idle`, `Charging`, `Wait Car`, `Complete`) instead of raw integers (`1`, `2`, `3`, `4`). The underlying API attribute returns the same integer as the `car_state` property, and no enum mapping was previously applied (closes #63).
+
 ## [2026.6.1] - 2026-06-12
 
 ### Fixed
