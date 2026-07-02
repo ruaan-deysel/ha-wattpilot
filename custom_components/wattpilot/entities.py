@@ -539,7 +539,8 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
             elif isinstance(state, list):
                 state_list = state
                 if desc.value_id is None:
-                    state = state_list[0]
+                    non_none = [v for v in state_list if v is not None]
+                    state = non_none[0] if non_none else None
                     for i, attr_state in enumerate(state_list[1:], start=1):
                         self._attributes[f"state{i}"] = attr_state
                 else:

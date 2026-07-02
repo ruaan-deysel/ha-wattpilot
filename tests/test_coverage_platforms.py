@@ -368,6 +368,75 @@ class TestAdditionalEntityEdgeCases:
         assert entity._attributes.get("state1") == "val1"
         assert entity._attributes.get("state2") == "val2"
 
+    @pytest.mark.asyncio
+    async def test_entity_validate_property_list_skips_leading_none(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """
+        Test validate property with list whose first element is None.
+
+        Reproduces the wattpilot_flex 3-phase 'tma' (charger_temp) property,
+        which reports its leading slot as null (e.g. [None, 23.875, 25.25,
+        25.5, 23.875]). The main state must fall back to the first non-None
+        entry instead of surfacing None as the sensor state.
+        """
+        from custom_components.wattpilot.descriptions import (
+            SOURCE_PROPERTY,
+            WattpilotSensorEntityDescription,
+        )
+        from custom_components.wattpilot.entities import ChargerPlatformEntity
+
+        mock_charger.all_properties = {"test_prop": "test_value"}
+
+        desc = WattpilotSensorEntityDescription(
+            key="test",
+            charger_key="test_prop",
+            name="Test",
+            source=SOURCE_PROPERTY,
+            value_id=None,  # No value_id
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+
+        state_list = [None, 23.875, 25.25, 25.5, 23.875]
+        result = await entity._async_update_validate_property(state_list)
+
+        # Should skip the leading None and use the first real value
+        assert result == 23.875
+        # Attributes still mirror the raw list from index 1 onward
+        assert entity._attributes.get("state1") == 23.875
+        assert entity._attributes.get("state2") == 25.25
+        assert entity._attributes.get("state3") == 25.5
+        assert entity._attributes.get("state4") == 23.875
+
+    @pytest.mark.asyncio
+    async def test_entity_validate_property_list_all_none(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test validate property with list of all-None entries stays None."""
+        from custom_components.wattpilot.descriptions import (
+            SOURCE_PROPERTY,
+            WattpilotSensorEntityDescription,
+        )
+        from custom_components.wattpilot.entities import ChargerPlatformEntity
+
+        mock_charger.all_properties = {"test_prop": "test_value"}
+
+        desc = WattpilotSensorEntityDescription(
+            key="test",
+            charger_key="test_prop",
+            name="Test",
+            source=SOURCE_PROPERTY,
+            value_id=None,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+
+        state_list = [None, None]
+        result = await entity._async_update_validate_property(state_list)
+
+        assert result is None
+
 
 class TestSensorEnumEdgeCases:
     """Test sensor enum handling edge cases."""
