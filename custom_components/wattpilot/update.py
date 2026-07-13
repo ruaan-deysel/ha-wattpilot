@@ -168,7 +168,7 @@ class ChargerUpdate(ChargerPlatformEntity, UpdateEntity):
             return {}
 
     async def async_install(
-        self, version: str | None, *, backup: bool, **kwargs: Any
+        self, version: str | None, backup: bool, **kwargs: Any
     ) -> None:
         """Trigger update install."""
         _ = backup
