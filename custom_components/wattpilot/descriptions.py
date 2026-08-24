@@ -103,13 +103,13 @@ SENSOR_DESCRIPTIONS: list[WattpilotSensorEntityDescription] = [
         translation_key="car_connected",
         enum={
             0: "Unknown",
-            1: "Idle",
-            2: "Charging",
-            3: "Wait Car",
-            4: "Complete",
+            1: "Disconnected",
+            2: "Connected",
+            3: "Connected",
+            4: "Connected",
             5: "Error",
         },
-        description_text="Charging state reported by the car plug (same as Car State but sourced from the API client attribute). Values: 'Unknown', 'Idle', 'Charging', 'Wait Car', 'Complete', 'Error'",
+        description_text="Charging state reported by the car plug (same as Car State but sourced from the API client attribute). Values: 'Unknown', 'Disconnected', 'Connected', 'Error'",
     ),
     # --- Namespace list sensors (ID chips/cards) ---
     *[
