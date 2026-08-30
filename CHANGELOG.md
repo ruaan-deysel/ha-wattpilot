@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [2026.8.0] - 2026-08-30
+
+### Fixed
+
+- Updated the `car_connected` sensor to report simplified connection states derived from car status: `Disconnected` (`1`) and `Connected` (`2`, `3`, `4`), with `Unknown` (`0`) and `Error` (`5`) retained.
+- Updated `car_connected` sensor description text to match the new binary-style connection reporting.
+- Contributor: [@TiSocks](https://github.com/TiSocks) in [#105](https://github.com/ruaan-deysel/ha-wattpilot/pull/105).
+
 ## [2026.6.2] - 2026-06-14
 
 ### Fixed
