@@ -82,23 +82,6 @@ The integration provides several services for advanced control:
 - `wattpilot.connect` - Manually connect to the charger
 - `wattpilot.disconnect` - Manually disconnect from the charger
 
-### Example: Next Trip Automation
-
-```yaml
-automation:
-  - alias: "Set Wattpilot Next Trip"
-    trigger:
-      - platform: state
-        entity_id: input_datetime.wattpilot_departure
-    action:
-      - service: wattpilot.set_next_trip
-        data:
-          device_id: !input wattpilot_device
-          departure_time: "{{ states('input_datetime.wattpilot_departure') }}"
-```
-
-See [packages/wattpilot/](packages/wattpilot/) for complete automation examples.
-
 ## Troubleshooting
 
 ### Common Issues
@@ -131,18 +114,6 @@ logger:
   logs:
     custom_components.wattpilot: debug
 ```
-
-## Screenshots
-
-### Device View
-
-![screenshot of Wattpilot Device](doc/device_view1.jpg)
-![screenshot of Wattpilot Device](doc/device_view2.jpg)
-![screenshot of Wattpilot Device](doc/device_view3.jpg)
-
-### Service Call
-
-![screenshot of Next Trip service](doc/service_view1.jpg)
 
 ## Contributing
 
