@@ -242,7 +242,7 @@
         "name": "WebSocket Clients"
       },
       "session_energy": {
-        "name": "Connection Charged"
+        "name": "Session Energy"
       },
       "wifi_state": {
         "name": "WiFi State"
