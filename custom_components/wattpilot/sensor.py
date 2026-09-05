@@ -159,9 +159,12 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
                 precision = self.entity_description.suggested_display_precision
                 if precision is not None:
                     state = round(state, precision)
-                # Never report a value lower than what was last stored.
+                # Prevent tiny floating-point noise from causing HA recorder warnings
+                # by enforcing monotonicity for small drops, but allow significant
+                # drops (>= 1.0) to pass through so true resets (e.g. new session) work.
                 if isinstance(self._attr_native_value, int | float):
-                    state = max(state, self._attr_native_value)
+                    if state < self._attr_native_value and (self._attr_native_value - state) < 1.0:
+                        state = self._attr_native_value
             if self._attr_native_unit_of_measurement is not None:
                 self._attr_native_value = state
             return state
