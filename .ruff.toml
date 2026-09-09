@@ -43,6 +43,7 @@ ignore = [
     "PLR0912", # Too many branches (complex branching logic)
     "TRY301", # Abstract raise (acceptable for config entry)
     "PLW0603", # Global statement (service registration flag)
+    "CPY001", # Missing copyright notice at top of file
 ]
 
 [lint.flake8-pytest-style]

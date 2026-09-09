@@ -100,7 +100,7 @@ WattpilotSensorEntityDescription(
     source=SOURCE_PROPERTY,  # "property" | "attribute" | "namespacelist"
     device_class=SensorDeviceClass.ENERGY,
     firmware=">=38.5",  # Optional: minimum firmware version
-    variant="11",        # Optional: supported device variants
+    variant="11",  # Optional: supported device variants
     connection="local",  # Optional: supported connection types
 )
 ```
@@ -120,6 +120,7 @@ Key types:
 
 ```python
 from wattpilot_api import Wattpilot, LoadMode, CarStatus
+
 charger = Wattpilot(host, password)
 await charger.connect()
 charger.all_properties  # Dict of all current properties
@@ -204,6 +205,7 @@ def native_value(self):
     if self.coordinator.data is None:
         return self._default_state
     return self.coordinator.data.get(self._identifier, self._default_state)
+
 
 @property
 def available(self) -> bool:

@@ -436,3 +436,50 @@ class TestChargerSensor:
             sensor._attr_native_unit_of_measurement = None
             validated_state = await sensor._async_update_validate_platform_state(None)
             assert validated_state == STATE_UNKNOWN
+
+    @pytest.mark.asyncio
+    async def test_total_increasing_sensor_validation_and_reset(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test TOTAL_INCREASING sensor clamping, rounding, monotonicity, and reset handling."""
+        from homeassistant.components.sensor import SensorStateClass
+
+        from custom_components.wattpilot.sensor import ChargerSensor
+
+        entry = self._make_entry(mock_config_entry_data, mock_charger, mock_coordinator)
+        desc = self._make_sensor_description(
+            key="wh",
+            charger_key="wh",
+            default_state=0.0,
+            state_class=SensorStateClass.TOTAL_INCREASING,
+            suggested_display_precision=2,
+            native_unit_of_measurement="kWh",
+        )
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp",
+            return_value=0.0,
+        ):
+            sensor = ChargerSensor(hass, entry, desc, mock_charger)
+            # 1. Negative value clamped to 0
+            val = await sensor._async_update_validate_platform_state(-0.005)
+            assert val == 0.0
+
+            # 2. Normal value with rounding
+            val = await sensor._async_update_validate_platform_state(12.3456)
+            assert val == 12.35
+            assert sensor._attr_native_value == 12.35
+
+            # 3. Small drop (< 1.0) due to noise maintains previous value
+            val = await sensor._async_update_validate_platform_state(12.34)
+            assert val == 12.35
+            assert sensor._attr_native_value == 12.35
+
+            # 4. Large drop (>= 1.0) resets value for new session (PR #118)
+            val = await sensor._async_update_validate_platform_state(0.0)
+            assert val == 0.0
+            assert sensor._attr_native_value == 0.0

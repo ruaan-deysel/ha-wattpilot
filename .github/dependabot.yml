@@ -19,9 +19,10 @@ updates:
       - dependency-type: "all"
     versioning-strategy: increase
     ignore:
-      # pytest-asyncio is pinned (==) by pytest-homeassistant-custom-component.
-      # Letting Dependabot raise its floor independently produces an
+      # pytest and pytest-asyncio are pinned (==) by pytest-homeassistant-custom-component.
+      # Letting Dependabot raise their floor independently produces an
       # unsatisfiable lock; it must track whatever pthcc allows.
+      - dependency-name: "pytest"
       - dependency-name: "pytest-asyncio"
 
   - package-ecosystem: "github-actions"

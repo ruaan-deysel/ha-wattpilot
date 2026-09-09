@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.9.0] - 2026-09-04
+
+### Fixed
+
+- Fixed `session_energy` reset handling: allow significant value drops (>= 1.0) to pass through so true resets (e.g. starting a new charging session) work, while preserving monotonicity protection against small floating-point measurement noise.
+- Renamed sensor from "Connection Charged" to "Session Energy" in translations, matching the official Solar.WattPilot app naming.
+- Contributor: [@TiSocks](https://github.com/TiSocks) in [#118](https://github.com/ruaan-deysel/ha-wattpilot/pull/118).
+
+### Security
+
+- Resolved 30+ dependency vulnerabilities by unlocking and updating `uv.lock`:
+  - Upgraded `aiohttp` to 3.14.3 (fixes CVE-2026-54273, CVE-2026-54277, CVE-2026-54278, GHSA-4fvr-rgm6-gqmc, GHSA-63hw-fmq6-xxg2, GHSA-g3cq-j2xw-wf74, GHSA-2765-552w-jh52, and related DoS/memory bypass advisories).
+  - Upgraded `cryptography` to 48.0.1 (fixes Bleichenbacher timing oracle and path-building advisories).
+  - Upgraded `pillow` to 12.3.0 (fixes heap out-of-bounds write, command injection, and decompression bomb advisories).
+  - Upgraded `pyjwt` to 2.13.0 (fixes JWKS SSRF and DoS advisories).
+  - Upgraded `pip` to 26.2.1 (fixes path traversal in entry point names).
+
+### Changed
+
+- Updated development dependencies:
+  - `homeassistant>=2026.9.0` ([#121](https://github.com/ruaan-deysel/ha-wattpilot/pull/121))
+  - `pytest-homeassistant-custom-component>=0.13.363` ([#120](https://github.com/ruaan-deysel/ha-wattpilot/pull/120))
+  - `ruff>=0.16.6` ([#119](https://github.com/ruaan-deysel/ha-wattpilot/pull/119))
+- Relaxed `pytest>=9.0.0` in `pyproject.toml` and added `pytest` to Dependabot ignore list in `.github/dependabot.yml` to track `pytest-homeassistant-custom-component`'s pinned version and maintain lockfile stability.
+
 ## [2026.8.0] - 2026-08-30
 
 ### Fixed

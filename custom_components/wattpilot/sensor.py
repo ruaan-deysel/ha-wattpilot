@@ -162,9 +162,12 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
                 # Prevent tiny floating-point noise from causing HA recorder warnings
                 # by enforcing monotonicity for small drops, but allow significant
                 # drops (>= 1.0) to pass through so true resets (e.g. new session) work.
-                if isinstance(self._attr_native_value, int | float):
-                    if state < self._attr_native_value and (self._attr_native_value - state) < 1.0:
-                        state = self._attr_native_value
+                if (
+                    isinstance(self._attr_native_value, int | float)
+                    and state < self._attr_native_value
+                    and (self._attr_native_value - state) < 1.0
+                ):
+                    state = self._attr_native_value
             if self._attr_native_unit_of_measurement is not None:
                 self._attr_native_value = state
             return state

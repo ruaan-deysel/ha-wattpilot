@@ -44,17 +44,18 @@ charger.connected  # Boolean connection state
 charger.properties_initialized  # Boolean - all properties loaded
 charger.name, charger.serial, charger.firmware  # Device identifiers
 
+
 # Callbacks (async-friendly)
-async def on_property_change(identifier: str, value: Any) -> None:
-    ...
+async def on_property_change(identifier: str, value: Any) -> None: ...
+
 
 unsub = charger.on_property_change(on_property_change)  # returns unsubscribe callable
 unsub()  # disconnect the callback
 
 # Enums and constants
 LoadMode.DEFAULT  # 3
-LoadMode.ECO      # 4
-LoadMode.NEXTTRIP # 5
+LoadMode.ECO  # 4
+LoadMode.NEXTTRIP  # 5
 ```
 
 ## Entity Descriptions (descriptions.py)
@@ -67,7 +68,7 @@ from .descriptions import (
     WattpilotSensorEntityDescription,
     SENSOR_DESCRIPTIONS,
     SOURCE_PROPERTY,
-    filter_descriptions
+    filter_descriptions,
 )
 
 # In platform setup
@@ -86,7 +87,7 @@ WattpilotSensorEntityDescription(
     state_class=SensorStateClass.TOTAL_INCREASING,
     native_unit_of_measurement="Wh",
     firmware=">=38.5",  # Optional version constraint
-    variant="11",        # Optional variant filter
+    variant="11",  # Optional variant filter
     connection="local",  # Optional connection filter
 )
 ```
@@ -113,9 +114,11 @@ entry.runtime_data = WattpilotRuntimeData(
     params=dict(entry.data),
 )
 
+
 # Register callback for WebSocket property updates
 async def _on_property_change(identifier: str, value: Any) -> None:
     await async_property_update_handler(hass, entry, identifier, value)
+
 
 unsub = charger.on_property_change(_on_property_change)
 entry.runtime_data.property_updates_callback = unsub  # Save for cleanup
@@ -134,14 +137,15 @@ entry.runtime_data.property_updates_callback = unsub  # Save for cleanup
 # Property access (from utils.py)
 from .utils import async_GetChargerProp, async_SetChargerProp, GetChargerProp
 
-value = await async_GetChargerProp(charger, 'amp', default=6)  # async read
-await async_SetChargerProp(charger, 'amp', 16)                 # async write
-value = GetChargerProp(charger, 'amp', default=6)              # sync read (from coordinator.data)
+value = await async_GetChargerProp(charger, "amp", default=6)  # async read
+await async_SetChargerProp(charger, "amp", 16)  # async write
+value = GetChargerProp(charger, "amp", default=6)  # sync read (from coordinator.data)
 
 # Modern HA runtime data storage pattern (entry.runtime_data)
 charger = entry.runtime_data.charger
 coordinator = entry.runtime_data.coordinator
 push_entities = entry.runtime_data.push_entities
+
 
 # Entity base pattern (inherits from CoordinatorEntity)
 class ChargerSensor(ChargerPlatformEntity, SensorEntity):
@@ -157,6 +161,7 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
         """Check availability based on coordinator."""
         return self.coordinator.available and not self._init_failed
 
+
 # Logging convention (includes entry_id for debugging)
 _LOGGER.debug("%s - %s: message", entry.entry_id, method_name)
 ```
@@ -171,6 +176,7 @@ if not hass.data.get(DOMAIN, {}).get("services_registered"):
     await async_registerService(hass, "set_next_trip", async_service_SetNextTrip)
     hass.data.setdefault(DOMAIN, {})["services_registered"] = True
 
+
 # Service implementation pattern (services.py)
 async def async_service_SetNextTrip(hass: HomeAssistant, call: ServiceCall) -> None:
     device_id = call.data.get(CONF_DEVICE_ID)
@@ -179,7 +185,7 @@ async def async_service_SetNextTrip(hass: HomeAssistant, call: ServiceCall) -> N
         return
 
     charger = await async_GetChargerFromDeviceID(hass, device_id)
-    await async_SetChargerProp(charger, 'ftt', timestamp)
+    await async_SetChargerProp(charger, "ftt", timestamp)
 ```
 
 ## Common API Keys
