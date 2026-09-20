@@ -61,7 +61,10 @@ async def _async_handle_property_update(
             coordinator.async_handle_property_update(identifier, value)
 
         entity = runtime_data.push_entities.get(identifier)
-        if entity is not None:
+        if isinstance(entity, list):
+            for ent in entity:
+                hass.async_create_task(ent.async_local_push(value))
+        elif entity is not None:
             hass.async_create_task(entity.async_local_push(value))
 
         if identifier in EVENT_PROPS:

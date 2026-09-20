@@ -174,7 +174,18 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "plug_connected": {
+        "name": "Plug Connected"
+      },
+      "charging": {
+        "name": "Charging"
+      }
+    },
     "sensor": {
+      "phases_in_use": {
+        "name": "Phases in Use"
+      },
       "access_state": {
         "name": "Access State"
       },

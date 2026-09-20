@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntityDescription,
+)
 from homeassistant.components.button import (
     ButtonDeviceClass,
     ButtonEntityDescription,
@@ -28,6 +32,7 @@ from homeassistant.components.update import (
 )
 from homeassistant.const import (
     EntityCategory,
+    UnitOfTime,
 )
 
 # ---------------------------------------------------------------------------
@@ -73,6 +78,41 @@ class WattpilotDescriptionMixin:
 
 
 # ---------------------------------------------------------------------------
+# Binary sensor descriptions
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True, kw_only=True)
+class WattpilotBinarySensorEntityDescription(
+    WattpilotDescriptionMixin, BinarySensorEntityDescription
+):
+    """Describes a Wattpilot binary sensor entity."""
+
+    # Set of raw values considered ON / True
+    on_values: set[Any] | None = None
+
+
+BINARY_SENSOR_DESCRIPTIONS: list[WattpilotBinarySensorEntityDescription] = [
+    WattpilotBinarySensorEntityDescription(
+        key="plug_connected",
+        charger_key="car",
+        uid="plug_connected",
+        translation_key="plug_connected",
+        device_class=BinarySensorDeviceClass.PLUG,
+        on_values={2, 3, 4},
+        description_text="Vehicle plug connection status",
+    ),
+    WattpilotBinarySensorEntityDescription(
+        key="charging",
+        charger_key="car",
+        uid="charging",
+        translation_key="charging",
+        device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
+        on_values={2},
+        description_text="Vehicle active charging status",
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
 # Sensor descriptions
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True, kw_only=True)
@@ -110,6 +150,14 @@ SENSOR_DESCRIPTIONS: list[WattpilotSensorEntityDescription] = [
             5: "Error",
         },
         description_text="Charging state reported by the car plug (same as Car State but sourced from the API client attribute). Values: 'Unknown', 'Disconnected', 'Connected', 'Error'",
+    ),
+    WattpilotSensorEntityDescription(
+        key="phases_in_use",
+        charger_key="phases_in_use",
+        source=SOURCE_ATTRIBUTE,
+        translation_key="phases_in_use",
+        icon="mdi:sine-wave",
+        description_text="Number of phases currently in use for charging",
     ),
     # --- Namespace list sensors (ID chips/cards) ---
     *[
@@ -597,6 +645,9 @@ class WattpilotNumberEntityDescription(
 ):
     """Describes a Wattpilot number entity."""
 
+    # Factor to multiply raw charger value to get native UI value
+    scale_factor: float | None = None
+
 
 NUMBER_DESCRIPTIONS: list[WattpilotNumberEntityDescription] = [
     WattpilotNumberEntityDescription(
@@ -674,10 +725,11 @@ NUMBER_DESCRIPTIONS: list[WattpilotNumberEntityDescription] = [
         set_type="int",
         translation_key="min_charging_time",
         device_class=NumberDeviceClass.DURATION,
-        native_min_value=60000,
-        native_max_value=3600000,
-        native_step=60000,
-        native_unit_of_measurement="ms",
+        native_min_value=1,
+        native_max_value=60,
+        native_step=1,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        scale_factor=1 / 60000,
         entity_category=EntityCategory.CONFIG,
         description_text="Minimum charging time after the charging has started",
     ),

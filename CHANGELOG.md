@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.9.1] - 2026-09-20
+
+### Added
+
+- Added `binary_sensor` platform with `plug_connected` and `charging` binary sensors (closes #127).
+  - `plug_connected` (`device_class: plug`): ON when car plug is connected (`car` in `{2, 3, 4}`).
+  - `charging` (`device_class: battery_charging`): ON when vehicle is actively charging (`car == 2`).
+- Added `phases_in_use` sensor exposing the number of phases actively used for charging from `wattpilot-api` client attribute (closes #88).
+- Multi-entity local push support: runtime data now supports multiple push entities registered to the same charger property identifier.
+
+### Changed
+
+- Updated dependency to `wattpilot-api>=1.5.0` and `packaging>=26.2`.
+- Scaled `min_charging_time` (`fmt`) number entity to minutes (`min`) with range 1–60 and step 1 (closes #128). Automatically converts to/from milliseconds for charger communication.
+
 ## [2026.9.0] - 2026-09-04
 
 ### Fixed

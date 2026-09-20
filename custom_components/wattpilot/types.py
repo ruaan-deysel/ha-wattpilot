@@ -21,7 +21,9 @@ class WattpilotRuntimeData:
 
     charger: Wattpilot  # Wattpilot client instance
     coordinator: WattpilotCoordinator  # DataUpdateCoordinator for the charger
-    push_entities: dict[str, ChargerPlatformEntity] = field(default_factory=dict)
+    push_entities: dict[str, ChargerPlatformEntity | list[ChargerPlatformEntity]] = (
+        field(default_factory=dict)
+    )
     params: dict[str, Any] = field(default_factory=dict)
     options_update_listener: Callable[[], None] | None = None
     property_updates_callback: Callable[[], None] | None = None

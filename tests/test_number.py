@@ -63,6 +63,17 @@ class TestNumberDescriptions:
                     f"Number {desc.key} has min ({desc.native_min_value}) > max ({desc.native_max_value})"
                 )
 
+    def test_min_charging_time_description(self) -> None:
+        """Test min_charging_time description properties."""
+        from homeassistant.const import UnitOfTime
+
+        desc = get_number_desc_by_key("fmt")
+        assert desc is not None
+        assert desc.scale_factor == 1 / 60000
+        assert desc.native_min_value == 1
+        assert desc.native_max_value == 60
+        assert desc.native_unit_of_measurement == UnitOfTime.MINUTES
+
 
 class TestNumberEntity:
     """Test number entity functionality."""
@@ -585,3 +596,43 @@ class TestChargerNumber:
             assert number._attr_native_min_value == 5.0
             assert number._attr_native_max_value == 50.0
             assert number._attr_native_step == 0.5
+
+    @pytest.mark.asyncio
+    async def test_number_scaling_read_and_write(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_coordinator: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test number scaling for min_charging_time (ms <-> minutes)."""
+        from custom_components.wattpilot.number import ChargerNumber
+
+        desc = self._make_number_description(
+            charger_key="fmt",
+            set_type="int",
+            scale_factor=1 / 60000,
+        )
+        entry = self._make_entry(
+            hass, mock_charger, mock_coordinator, mock_config_entry_data
+        )
+
+        with (
+            patch(
+                "custom_components.wattpilot.entities.GetChargerProp",
+                return_value=900000,
+            ),
+            patch(
+                "custom_components.wattpilot.number.async_SetChargerProp",
+                new_callable=AsyncMock,
+            ) as mock_set,
+        ):
+            number = ChargerNumber(hass, entry, desc, mock_charger)
+            # Read state: 900,000 ms * (1/60000) = 15.0 minutes
+            state = await number._async_update_validate_platform_state(900000)
+            assert state == 15.0
+            assert number._attr_native_value == 15.0
+
+            # Write state: 15.0 minutes / (1/60000) = 900,000 ms
+            await number.async_set_native_value(15.0)
+            mock_set.assert_called_once_with(mock_charger, "fmt", 900000)

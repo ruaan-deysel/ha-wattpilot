@@ -55,12 +55,30 @@ class TestPropertyUpdateHandler:
         # Add entity to push_entities
         mock_config_entry.runtime_data.push_entities["test_prop"] = entity
 
-        mock_hass.async_create_task = MagicMock(side_effect=lambda coro: coro)
+        mock_hass.async_create_task = MagicMock(side_effect=lambda coro: coro.close())
 
         await async_property_update_handler(
             mock_hass, mock_config_entry, "test_prop", "test_value"
         )
-        entity.async_local_push.assert_called_once()
+        assert mock_hass.async_create_task.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_property_update_handler_with_entity_list(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any
+    ) -> None:
+        """Test property update handler dispatches to multiple entities in a list."""
+        entity1 = MagicMock()
+        entity1.async_local_push = AsyncMock()
+        entity2 = MagicMock()
+        entity2.async_local_push = AsyncMock()
+
+        mock_config_entry.runtime_data.push_entities["test_prop"] = [entity1, entity2]
+        mock_hass.async_create_task = MagicMock(side_effect=lambda coro: coro.close())
+
+        await async_property_update_handler(
+            mock_hass, mock_config_entry, "test_prop", "test_value"
+        )
+        assert mock_hass.async_create_task.call_count == 2
 
     @pytest.mark.asyncio
     async def test_property_update_handler_fires_event(

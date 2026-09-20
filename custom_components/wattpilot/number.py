@@ -121,6 +121,9 @@ class ChargerNumber(ChargerPlatformEntity, NumberEntity):
                 state = state[0] if state else None
             if state is not None:
                 state = float(state)
+                scale = getattr(self.entity_description, "scale_factor", None)
+                if scale is not None:
+                    state = state * scale
                 self._attr_native_value = state
             return state
         except (TypeError, ValueError, IndexError) as e:
@@ -145,7 +148,14 @@ class ChargerNumber(ChargerPlatformEntity, NumberEntity):
             if self._identifier == "fte":
                 await self._charger.set_next_trip_energy(value)
             else:
-                await async_SetChargerProp(self._charger, self._identifier, value)
+                scale = getattr(self.entity_description, "scale_factor", None)
+                if scale is not None and scale != 0:
+                    raw_val = value / scale
+                    if self.entity_description.set_type == "int":
+                        raw_val = round(raw_val)
+                    await async_SetChargerProp(self._charger, self._identifier, raw_val)
+                else:
+                    await async_SetChargerProp(self._charger, self._identifier, value)
         except Exception as e:
             _LOGGER.error(
                 "%s - %s: update failed: %s (%s.%s)",

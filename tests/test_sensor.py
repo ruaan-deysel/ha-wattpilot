@@ -87,6 +87,13 @@ class TestSensorDescriptions:
                 f"Power sensor '{desc.charger_key}' should have state_class=MEASUREMENT"
             )
 
+    def test_phases_in_use_sensor_exists(self) -> None:
+        """Test phases_in_use sensor is defined."""
+        phases = get_sensor_desc_by_key("phases_in_use")
+        assert phases is not None
+        assert phases.source == "attribute"
+        assert phases.icon == "mdi:sine-wave"
+
 
 class TestSensorEntity:
     """Test sensor entity functionality."""

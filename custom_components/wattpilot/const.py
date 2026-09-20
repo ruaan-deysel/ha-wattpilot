@@ -6,6 +6,7 @@ from typing import Final
 
 DOMAIN: Final = "wattpilot"
 SUPPORTED_PLATFORMS: Final = [
+    "binary_sensor",
     "button",
     "number",
     "select",

@@ -23,6 +23,7 @@ class TestIntegrationSetup:
         from custom_components.wattpilot.const import SUPPORTED_PLATFORMS
 
         expected_platforms = [
+            "binary_sensor",
             "button",
             "number",
             "select",
