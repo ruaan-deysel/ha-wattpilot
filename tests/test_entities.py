@@ -983,3 +983,66 @@ class TestChargerPlatformEntity:
         ):
             await entity.async_added_to_hass()
             entity.async_local_push.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_loads_initial_state_for_attribute(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test that async_added_to_hass loads initial state from charger attribute."""
+        mock_charger.phases_in_use = 3
+
+        desc = WattpilotSensorEntityDescription(
+            key="phases_in_use",
+            charger_key="phases_in_use",
+            name="Phases in use",
+            source=SOURCE_ATTRIBUTE,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        entity.async_on_remove = MagicMock()
+        entity.async_local_push = AsyncMock()
+
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity.async_added_to_hass",
+            new_callable=AsyncMock,
+        ):
+            await entity.async_added_to_hass()
+            entity.async_local_push.assert_called_once_with(3)
+
+    def test_handle_coordinator_update_attribute(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test that _handle_coordinator_update schedules async_local_poll for SOURCE_ATTRIBUTE."""
+        mock_charger.phases_in_use = 3
+
+        desc = WattpilotSensorEntityDescription(
+            key="phases_in_use",
+            charger_key="phases_in_use",
+            name="Phases in use",
+            source=SOURCE_ATTRIBUTE,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        entity.async_local_poll = AsyncMock()
+        entity._handle_coordinator_update()
+        mock_hass.async_create_task.assert_called_once()
+
+    def test_handle_coordinator_update_property(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test that _handle_coordinator_update delegates to CoordinatorEntity for SOURCE_PROPERTY."""
+        mock_charger.all_properties = {"test_prop": "val"}
+
+        desc = WattpilotSensorEntityDescription(
+            key="test",
+            charger_key="test_prop",
+            name="Test",
+            source=SOURCE_PROPERTY,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity._handle_coordinator_update"
+        ) as mock_super_update:
+            entity._handle_coordinator_update()
+            mock_super_update.assert_called_once()

@@ -88,6 +88,20 @@ async def _async_handle_property_update(
         )
 
 
+def register_push_entity(
+    push_entities: dict[str, Any], identifier: str, entity: Any
+) -> None:
+    """Register an entity to receive property push updates without overwriting existing entities."""
+    if identifier in push_entities:
+        existing = push_entities[identifier]
+        if isinstance(existing, list):
+            existing.append(entity)
+        else:
+            push_entities[identifier] = [existing, entity]
+    else:
+        push_entities[identifier] = entity
+
+
 async def async_GetChargerProp(
     charger: Any, identifier: str, default: Any | None = None
 ) -> Any:

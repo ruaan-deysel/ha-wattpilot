@@ -25,6 +25,7 @@ from custom_components.wattpilot.utils import (
     async_GetDataStoreFromDeviceID,
     async_property_update_handler,
     async_SetChargerProp,
+    register_push_entity,
 )
 
 
@@ -119,6 +120,34 @@ class TestPropertyUpdateHandler:
         await async_property_update_handler(
             mock_hass, mock_config_entry, "test_prop", "test_value"
         )
+
+
+class TestRegisterPushEntity:
+    """Test register_push_entity helper function."""
+
+    def test_register_push_entity_first_entry(self) -> None:
+        """Test registering the first entity for an identifier."""
+        push_entities: dict[str, Any] = {}
+        entity = MagicMock()
+        register_push_entity(push_entities, "prop_1", entity)
+        assert push_entities["prop_1"] is entity
+
+    def test_register_push_entity_second_entry(self) -> None:
+        """Test registering a second entity creates a list."""
+        entity1 = MagicMock()
+        entity2 = MagicMock()
+        push_entities: dict[str, Any] = {"prop_1": entity1}
+        register_push_entity(push_entities, "prop_1", entity2)
+        assert push_entities["prop_1"] == [entity1, entity2]
+
+    def test_register_push_entity_third_entry(self) -> None:
+        """Test registering subsequent entities appends to the list."""
+        entity1 = MagicMock()
+        entity2 = MagicMock()
+        entity3 = MagicMock()
+        push_entities: dict[str, Any] = {"prop_1": [entity1, entity2]}
+        register_push_entity(push_entities, "prop_1", entity3)
+        assert push_entities["prop_1"] == [entity1, entity2, entity3]
 
 
 class TestChargerPropertyAccess:

@@ -10,7 +10,10 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
+from custom_components.wattpilot.const import DOMAIN
 from custom_components.wattpilot.descriptions import WattpilotSensorEntityDescription
+from custom_components.wattpilot.sensor import async_setup_entry
+from custom_components.wattpilot.types import WattpilotRuntimeData
 
 
 def get_sensor_desc_by_key(charger_key: str) -> WattpilotSensorEntityDescription | None:
@@ -274,6 +277,52 @@ class TestSensorPlatformSetup:
         ):
             await async_setup_entry(hass, entry, async_add_entities)
             assert async_add_entities.called
+
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_preserves_existing_push_entities(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_coordinator: MagicMock,
+        mock_config_entry_data: dict,
+    ) -> None:
+        """Test sensor setup preserves existing push entities (e.g. from binary_sensor)."""
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        existing_binary_sensor = MagicMock()
+        push_entities: dict[str, Any] = {"car": [existing_binary_sensor]}
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=mock_coordinator,
+            push_entities=push_entities,
+            params=mock_config_entry_data,
+        )
+        entry.runtime_data = runtime_data
+
+        async_add_entities = MagicMock()
+
+        with patch(
+            "custom_components.wattpilot.entities.GetChargerProp",
+            return_value=2,
+        ):
+            await async_setup_entry(hass, entry, async_add_entities)
+            assert async_add_entities.called
+            # Ensure "car" still contains the existing binary sensor and now has the sensor appended
+            assert "car" in push_entities
+            assert isinstance(push_entities["car"], list)
+            assert existing_binary_sensor in push_entities["car"]
+            assert len(push_entities["car"]) >= 2
 
 
 class TestChargerSensor:

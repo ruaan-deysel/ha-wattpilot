@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.9.2] - 2026-09-21
+
+### Fixed
+
+- Fixed `push_entities` overwrite bug across entity platforms during integration startup (fixes #129). Centralized entity registration via `register_push_entity()` across `binary_sensor`, `sensor`, `number`, `select`, `switch`, `time`, and `update` platforms so entities sharing the same charger property identifier (e.g. `binary_sensor.wattpilot_charging`, `binary_sensor.wattpilot_plug_connected`, and `sensor.wattpilot_car_state` all monitoring property `car`) receive real-time push updates without clobbering each other.
+- Fixed initial state loading for `SOURCE_ATTRIBUTE` entities in `async_added_to_hass()` and added `_handle_coordinator_update()` dispatch for attribute-based entities (e.g. `phases_in_use`).
+
 ## [2026.9.1] - 2026-09-20
 
 ### Added

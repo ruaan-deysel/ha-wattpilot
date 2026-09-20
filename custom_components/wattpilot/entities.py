@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from packaging.version import InvalidVersion, Version
@@ -332,6 +332,14 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
     def _init_platform_specific(self) -> None:
         """Platform specific init actions."""
 
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self._source == SOURCE_ATTRIBUTE:
+            self.hass.async_create_task(self.async_local_poll())
+            return
+        super()._handle_coordinator_update()
+
     async def async_added_to_hass(self) -> None:
         """
         Load initial state from coordinator data when entity is added to HA.
@@ -340,11 +348,21 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
         stay "Unknown" until the charger pushes a property change event.
         """
         await super().async_added_to_hass()
-        if (
-            self._init_failed
-            or self._source == SOURCE_NONE
-            or self.coordinator.data is None
-        ):
+        if self._init_failed or self._source == SOURCE_NONE:
+            return
+
+        if self._source == SOURCE_ATTRIBUTE:
+            value = getattr(self._charger, self._identifier, None)
+            if value is not None:
+                _LOGGER.debug(
+                    "%s - %s: async_added_to_hass: loading initial state from attribute",
+                    self._charger_id,
+                    self._identifier,
+                )
+                await self.async_local_push(value)
+            return
+
+        if self.coordinator.data is None:
             return
         value = self.coordinator.data.get(self._identifier)
         if value is not None:

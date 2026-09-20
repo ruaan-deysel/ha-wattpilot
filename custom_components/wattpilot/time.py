@@ -20,6 +20,7 @@ from .descriptions import (
     WattpilotTimeEntityDescription,
 )
 from .entities import ChargerPlatformEntity, filter_descriptions
+from .utils import register_push_entity
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -60,7 +61,7 @@ async def async_setup_entry(
             continue
         entities.append(entity)
         if entity._source == SOURCE_PROPERTY:
-            push_entities[entity._identifier] = entity
+            register_push_entity(push_entities, entity._identifier, entity)
 
     _LOGGER.info(
         "%s - async_setup_entry: setup %s %s entities",
