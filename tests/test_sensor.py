@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -567,6 +567,14 @@ class TestChargerSensor:
         assert (
             await sensor._async_update_validate_platform_state(None) == "No Transaction"
         )
+        assert (
+            await sensor._async_update_validate_platform_state("None")
+            == "No Transaction"
+        )
+        assert (
+            await sensor._async_update_validate_platform_state("No Transaction")
+            == "No Transaction"
+        )
 
     @pytest.mark.asyncio
     async def test_setup_trx_null_and_partial_cards(
@@ -636,6 +644,14 @@ class TestChargerSensor:
         ]
         assert len(current_chip_sensors) == 1
         current_chip_sensor = current_chip_sensors[0]
+        assert current_chip_sensor.native_value == "No Transaction"
+
+        # Verify async_added_to_hass lifecycle properly dispatches present trx=None coordinator data
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity.async_added_to_hass",
+            new_callable=AsyncMock,
+        ):
+            await current_chip_sensor.async_added_to_hass()
         assert current_chip_sensor.native_value == "No Transaction"
 
         # 2. Assert only card sensors 0-4 are created

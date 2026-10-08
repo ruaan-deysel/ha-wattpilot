@@ -722,6 +722,26 @@ class TestChargerPlatformEntity:
         # Should be available
         assert entity.available is True
 
+    def test_entity_available_property_none_value(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test entity available when property is present but has None value."""
+        mock_charger.all_properties = {"trx": None}
+        mock_charger.connected = True
+        mock_charger.properties_initialized = True
+
+        desc = WattpilotSensorEntityDescription(
+            key="id_chip_current",
+            charger_key="trx",
+            name="Current Card ID",
+            source=SOURCE_PROPERTY,
+            default_state=999,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+
+        assert entity.available is True
+
     def test_entity_available_init_failed(
         self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
     ) -> None:

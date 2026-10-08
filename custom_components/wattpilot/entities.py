@@ -431,17 +431,25 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                 identifier,
             )
             return False
-        if (
-            self._source == SOURCE_PROPERTY
-            and GetChargerProp(self._charger, self._identifier, self._default_state)
-            is None
-        ):
-            _LOGGER.debug(
-                "%s - %s: available: false because unknown property",
-                charger_id,
-                identifier,
-            )
-            return False
+        if self._source == SOURCE_PROPERTY:
+            if not has_charger_prop(self._charger, self._identifier):
+                _LOGGER.debug(
+                    "%s - %s: available: false because unknown property",
+                    charger_id,
+                    identifier,
+                )
+                return False
+            if (
+                GetChargerProp(self._charger, self._identifier, self._default_state)
+                is None
+                and getattr(self, "_state_enum", None) is None
+            ):
+                _LOGGER.debug(
+                    "%s - %s: available: false because unknown property",
+                    charger_id,
+                    identifier,
+                )
+                return False
         if self._source == SOURCE_NAMESPACELIST:
             ns_val = GetChargerProp(
                 self._charger, self._identifier, self._default_state
