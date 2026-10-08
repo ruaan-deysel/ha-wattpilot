@@ -102,6 +102,8 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
         # Enum mapping for display values
         if desc.enum is not None:
             self._state_enum = dict(desc.enum)
+            if self._attr_native_value in self._state_enum:
+                self._attr_native_value = self._state_enum[self._attr_native_value]
 
         # HTML unescape flag
         if desc.html_unescape:
@@ -126,6 +128,12 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
                     # timezone if the charger value is naive.
                     state = dt_util.as_local(state)
                 return state
+            if (
+                (state is None or state == "None")
+                and hasattr(self, "_state_enum")
+                and self._default_state is not None
+            ):
+                state = self._default_state
             if state is None or state == "None":
                 # For sensors with a numeric device_class and unit, return None
                 # so HA treats it as "unknown" without raising ValueError.

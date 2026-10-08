@@ -131,6 +131,7 @@ class TestSwitchPlatformSetup:
         entry.runtime_data = runtime_data
 
         async_add_entities = MagicMock()
+        mock_charger.all_properties["fap"] = True
 
         with patch(
             "custom_components.wattpilot.entities.GetChargerProp",

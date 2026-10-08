@@ -26,6 +26,7 @@ from .descriptions import (
 from .utils import (
     GetChargerProp,
     async_GetChargerProp,
+    has_charger_prop,
 )
 
 if TYPE_CHECKING:
@@ -198,15 +199,13 @@ def filter_descriptions[T: WattpilotDescriptionMixin](
             )
             continue
         # Skip entities whose charger property doesn't exist on this device
-        if desc.source == SOURCE_PROPERTY:
-            sentinel = object()
-            if GetChargerProp(charger, identifier, sentinel) is sentinel:
-                _LOGGER.debug(
-                    "%s - %s: Skipped (property not available on charger)",
-                    charger_id,
-                    identifier,
-                )
-                continue
+        if desc.source == SOURCE_PROPERTY and not has_charger_prop(charger, identifier):
+            _LOGGER.debug(
+                "%s - %s: Skipped (property not available on charger)",
+                charger_id,
+                identifier,
+            )
+            continue
         result.append(desc)
     return result
 
@@ -261,7 +260,9 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                 # Use sentinel to detect missing properties (None might be a valid value)
                 sentinel = object()
                 prop_value = GetChargerProp(self._charger, self._identifier, sentinel)
-                if prop_value is sentinel:
+                if prop_value is sentinel and not has_charger_prop(
+                    self._charger, self._identifier
+                ):
                     _LOGGER.debug(
                         "%s - %s: __init__: Charger does not have property: %s (maybe an attribute?)",
                         self._charger_id,
@@ -290,8 +291,8 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
                     or ns_idx >= len(ns_val)
                     or ns_val[ns_idx] is None
                 ):
-                    _LOGGER.error(
-                        "%s - %s: __init__: Charger does not have namespacelist item: %s[%s]",
+                    _LOGGER.debug(
+                        "%s - %s: __init__: namespacelist slot %s[%s] is empty or absent, skipping entity",
                         self._charger_id,
                         self._identifier,
                         self._identifier,
@@ -364,14 +365,17 @@ class ChargerPlatformEntity(CoordinatorEntity["WattpilotCoordinator"]):
 
         if self.coordinator.data is None:
             return
-        value = self.coordinator.data.get(self._identifier)
-        if value is not None:
-            _LOGGER.debug(
-                "%s - %s: async_added_to_hass: loading initial state",
-                self._charger_id,
-                self._identifier,
-            )
-            await self.async_local_push(value)
+        if self._identifier in self.coordinator.data:
+            value = self.coordinator.data.get(self._identifier)
+            if value is not None or (
+                hasattr(self, "_state_enum") and self._default_state is not None
+            ):
+                _LOGGER.debug(
+                    "%s - %s: async_added_to_hass: loading initial state",
+                    self._charger_id,
+                    self._identifier,
+                )
+                await self.async_local_push(value)
 
     @property
     def description(self) -> str | None:

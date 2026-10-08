@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.const import (
@@ -152,6 +153,16 @@ def GetChargerProp(
         return default
 
 
+def has_charger_prop(charger: Any, identifier: str | None = None) -> bool:
+    """Return True if identifier is present in charger.all_properties mapping."""
+    if identifier is None:
+        return False
+    all_props = getattr(charger, "all_properties", None)
+    if not isinstance(all_props, Mapping):
+        return False
+    return identifier in all_props
+
+
 async def async_SetChargerProp(
     charger: Any,
     identifier: str | None = None,
@@ -214,7 +225,13 @@ async def async_GetDataStoreFromDeviceID(
             "%s - async_GetDataStoreFromDeviceID: get data store for config entry",
             DOMAIN,
         )
-        for entry_id in device.config_entries:
+        config_entry_id = getattr(device, "config_entry_id", None)
+        entry_ids = (
+            [config_entry_id]
+            if config_entry_id
+            else getattr(device, "config_entries", [])
+        )
+        for entry_id in entry_ids:
             entry = hass.config_entries.async_get_entry(entry_id)
             if entry is None or entry.domain != DOMAIN:
                 continue
@@ -264,7 +281,13 @@ async def async_GetChargerFromDeviceID(hass: HomeAssistant, device_id: str) -> A
             DOMAIN,
         )
         charger: Any | None = None
-        for entry_id in device.config_entries:
+        config_entry_id = getattr(device, "config_entry_id", None)
+        entry_ids = (
+            [config_entry_id]
+            if config_entry_id
+            else getattr(device, "config_entries", [])
+        )
+        for entry_id in entry_ids:
             entry = hass.config_entries.async_get_entry(entry_id)
             if entry is None or entry.domain != DOMAIN:
                 continue
