@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -539,3 +539,166 @@ class TestChargerSensor:
             val = await sensor._async_update_validate_platform_state(0.0)
             assert val == 0.0
             assert sensor._attr_native_value == 0.0
+
+    @pytest.mark.asyncio
+    async def test_id_chip_current_enum_validation(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+    ) -> None:
+        """Test id_chip_current sensor maps enum values 0, 1, 10, 999 and None."""
+        from custom_components.wattpilot.descriptions import SENSOR_DESCRIPTIONS
+        from custom_components.wattpilot.sensor import ChargerSensor
+
+        entry = self._make_entry(mock_config_entry_data, mock_charger, mock_coordinator)
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "id_chip_current")
+
+        mock_charger.all_properties["trx"] = None
+        sensor = ChargerSensor(hass, entry, desc, mock_charger)
+
+        assert await sensor._async_update_validate_platform_state(0) == "No Chip"
+        assert await sensor._async_update_validate_platform_state(1) == "ID Chip 0"
+        assert await sensor._async_update_validate_platform_state(10) == "ID Chip 9"
+        assert (
+            await sensor._async_update_validate_platform_state(999) == "No Transaction"
+        )
+        assert (
+            await sensor._async_update_validate_platform_state(None) == "No Transaction"
+        )
+        assert (
+            await sensor._async_update_validate_platform_state("None")
+            == "No Transaction"
+        )
+        assert (
+            await sensor._async_update_validate_platform_state("No Transaction")
+            == "No Transaction"
+        )
+
+    @pytest.mark.asyncio
+    async def test_setup_trx_null_and_partial_cards(
+        self,
+        hass: HomeAssistant,
+        mock_charger: MagicMock,
+        mock_config_entry_data: dict,
+        mock_coordinator: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test setup creates current-chip sensor and only populated card sensors without error logs."""
+        import logging
+        from types import SimpleNamespace
+
+        from homeassistant.config_entries import ConfigEntry
+
+        from custom_components.wattpilot.const import DOMAIN
+        from custom_components.wattpilot.sensor import async_setup_entry
+        from custom_components.wattpilot.types import WattpilotRuntimeData
+        from custom_components.wattpilot.utils import async_property_update_handler
+
+        entry = ConfigEntry(
+            version=1,
+            minor_version=0,
+            domain=DOMAIN,
+            title="Test Wattpilot",
+            data=mock_config_entry_data,
+            source="user",
+            unique_id="12345678",
+            discovery_keys={},
+            options={},
+            subentries_data={},
+        )
+
+        # Set trx=None and 5 cards directly on mock_charger.all_properties
+        mock_charger.all_properties["trx"] = None
+        mock_charger.all_properties["cards"] = [
+            SimpleNamespace(energy=100.0 * i, name=f"Card {i}", cardId=f"ID{i}")
+            for i in range(5)
+        ]
+        mock_coordinator.data = mock_charger.all_properties
+
+        push_entities: dict[str, Any] = {}
+        runtime_data = WattpilotRuntimeData(
+            charger=mock_charger,
+            coordinator=mock_coordinator,
+            push_entities=push_entities,
+            params=mock_config_entry_data,
+        )
+        entry.runtime_data = runtime_data
+
+        added_entities: list[Any] = []
+
+        def mock_add_entities(entities: list[Any]) -> None:
+            added_entities.extend(entities)
+
+        caplog.set_level(logging.ERROR)
+
+        await async_setup_entry(hass, entry, mock_add_entities)
+
+        # 1. Assert current-chip sensor is created
+        current_chip_sensors = [
+            e
+            for e in added_entities
+            if getattr(e, "entity_description", None)
+            and e.entity_description.key == "id_chip_current"
+        ]
+        assert len(current_chip_sensors) == 1
+        current_chip_sensor = current_chip_sensors[0]
+        assert current_chip_sensor.native_value == "No Transaction"
+
+        # Verify async_added_to_hass lifecycle properly dispatches present trx=None coordinator data
+        with patch(
+            "custom_components.wattpilot.entities.CoordinatorEntity.async_added_to_hass",
+            new_callable=AsyncMock,
+        ):
+            await current_chip_sensor.async_added_to_hass()
+        assert current_chip_sensor.native_value == "No Transaction"
+
+        # 2. Assert only card sensors 0-4 are created
+        card_sensor_keys = [
+            e.entity_description.key
+            for e in added_entities
+            if getattr(e, "entity_description", None)
+            and e.entity_description.key.startswith("id_chip_")
+            and e.entity_description.key != "id_chip_current"
+        ]
+        expected_card_keys = [f"id_chip_{i}" for i in range(5)]
+        assert sorted(card_sensor_keys) == sorted(expected_card_keys)
+
+        # 3. Assert slots 5-9 produce no error-level log
+        error_logs = [
+            r.message
+            for r in caplog.records
+            if r.levelno >= logging.ERROR
+            and ("namespacelist" in r.message or "cards" in r.message)
+        ]
+        assert not error_logs
+
+        # 4. Simulate a trx push through the callback registered with on_property_change
+        import asyncio
+
+        tasks: list[asyncio.Task] = []
+
+        def capture_task(coro: Any) -> asyncio.Task:
+            task = asyncio.create_task(coro)
+            tasks.append(task)
+            return task
+
+        hass.async_create_task.side_effect = capture_task
+
+        async def _on_property_change(identifier: str, value: Any) -> None:
+            await async_property_update_handler(hass, entry, identifier, value)
+
+        mock_charger.on_property_change(_on_property_change)
+
+        # Verify pushing trx=1 updates the sensor to "ID Chip 0"
+        await _on_property_change("trx", 1)
+        await asyncio.gather(*tasks)
+        tasks.clear()
+        assert current_chip_sensor.native_value == "ID Chip 0"
+
+        # Verify pushing trx=None resets to "No Transaction"
+        await _on_property_change("trx", None)
+        await asyncio.gather(*tasks)
+        tasks.clear()
+        assert current_chip_sensor.native_value == "No Transaction"

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.10.0] - 2026-10-08
+
+### Fixed
+
+- **Current Card ID Entity Preservation**: Fixed setup property filtering in `filter_descriptions()` and `ChargerPlatformEntity.__init__` so supported properties with null values (such as `trx` when no charging transaction is active at startup) keep their entities instead of being treated as missing properties (fixes #139).
+- **ID Chip Current Sensor State Mapping**: Added enum default fallback so that `trx=None` resolves to default state `999` and renders as `"No Transaction"` in Home Assistant, preserving entity unique ID and registry attachments while correctly handling subsequent transaction updates.
+- **Empty Card Slot Log Level**: Changed namespacelist slot missing/empty logging in `ChargerPlatformEntity.__init__` from ERROR to DEBUG level to avoid spurious error logs when fewer than 10 RFID cards are configured on the charger.
+- **Home Assistant 2026.10 Device Registry Modernization**: Modernized device registry lookups in `utils.py` to use `device.config_entry_id` per Home Assistant 2026.10 best practices and avoid deprecated `device.config_entries` access.
+
 ## [2026.9.2] - 2026-09-21
 
 ### Fixed

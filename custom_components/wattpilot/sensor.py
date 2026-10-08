@@ -102,6 +102,8 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
         # Enum mapping for display values
         if desc.enum is not None:
             self._state_enum = dict(desc.enum)
+            if self._attr_native_value in self._state_enum:
+                self._attr_native_value = self._state_enum[self._attr_native_value]
 
         # HTML unescape flag
         if desc.html_unescape:
@@ -126,29 +128,39 @@ class ChargerSensor(ChargerPlatformEntity, SensorEntity):
                     # timezone if the charger value is naive.
                     state = dt_util.as_local(state)
                 return state
-            if state is None or state == "None":
+            if (
+                hasattr(self, "_html_unescape")
+                and self._html_unescape
+                and isinstance(state, str)
+            ):
+                state = html.unescape(state)
+
+            if hasattr(self, "_state_enum"):
+                if (
+                    state is None or state == "None"
+                ) and self._default_state is not None:
+                    state = self._default_state
+                if state in self._state_enum:
+                    state = self._state_enum[state]
+                elif state in self._state_enum.values():
+                    pass
+                elif state is None or state == "None":
+                    state = STATE_UNKNOWN
+                else:
+                    _LOGGER.warning(
+                        "%s - %s: _async_update_validate_platform_state failed: state %s not within enum values: %s",
+                        self._charger_id,
+                        self._identifier,
+                        state,
+                        self._state_enum,
+                    )
+            elif state is None or state == "None":
                 # For sensors with a numeric device_class and unit, return None
                 # so HA treats it as "unknown" without raising ValueError.
                 # Only use STATE_UNKNOWN for text-based sensors.
                 if self._attr_native_unit_of_measurement is not None:
                     return None
                 state = STATE_UNKNOWN
-            elif hasattr(self, "_html_unescape") and self._html_unescape:
-                state = html.unescape(state)
-            elif not hasattr(self, "_state_enum"):
-                pass
-            elif state in list(self._state_enum.keys()):
-                state = self._state_enum[state]
-            elif state in list(self._state_enum.values()):
-                pass
-            else:
-                _LOGGER.warning(
-                    "%s - %s: _async_update_validate_platform_state failed: state %s not within enum values: %s",
-                    self._charger_id,
-                    self._identifier,
-                    state,
-                    self._state_enum,
-                )
             # For TOTAL_INCREASING sensors, clamp negative values, apply
             # precision rounding, and enforce monotonicity to prevent
             # floating-point noise from causing HA recorder warnings.

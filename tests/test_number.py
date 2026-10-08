@@ -143,6 +143,7 @@ class TestNumberPlatformSetup:
         entry.runtime_data = runtime_data
 
         async_add_entities = MagicMock()
+        mock_charger.variant = "11"
 
         with patch(
             "custom_components.wattpilot.entities.GetChargerProp",

@@ -18,6 +18,7 @@ from custom_components.wattpilot.const import (
 )
 from custom_components.wattpilot.utils import (
     GetChargerProp,
+    _resolve_wattpilot_entry,
     async_ConnectCharger,
     async_DisconnectCharger,
     async_GetChargerFromDeviceID,
@@ -25,6 +26,7 @@ from custom_components.wattpilot.utils import (
     async_GetDataStoreFromDeviceID,
     async_property_update_handler,
     async_SetChargerProp,
+    has_charger_prop,
     register_push_entity,
 )
 
@@ -197,6 +199,26 @@ class TestChargerPropertyAccess:
         result = GetChargerProp(mock_charger, "test", "default")
         assert result == "default"
 
+    def test_has_charger_prop_success(self, mock_charger: MagicMock) -> None:
+        """Test has_charger_prop returns True when property exists."""
+        mock_charger.all_properties = {"frc": 1, "trx": None}
+        assert has_charger_prop(mock_charger, "frc") is True
+        assert has_charger_prop(mock_charger, "trx") is True
+        assert has_charger_prop(mock_charger, "missing") is False
+
+    def test_has_charger_prop_edge_cases(self) -> None:
+        """Test has_charger_prop with None identifier or missing/invalid all_properties."""
+        charger = MagicMock()
+        charger.all_properties = None
+        assert has_charger_prop(charger, "frc") is False
+        assert has_charger_prop(charger, None) is False
+
+        charger.all_properties = "not_a_mapping"
+        assert has_charger_prop(charger, "frc") is False
+
+        del charger.all_properties
+        assert has_charger_prop(charger, "frc") is False
+
     @pytest.mark.asyncio
     async def test_async_get_charger_prop_success(
         self, mock_charger: MagicMock
@@ -321,6 +343,129 @@ class TestDeviceRegistry:
             assert "runtime_data" in result
 
     @pytest.mark.asyncio
+    async def test_get_data_store_from_device_id_with_config_entry_id(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any
+    ) -> None:
+        """Test async_GetDataStoreFromDeviceID with device.config_entry_id (HA 2026.10+)."""
+        device = MagicMock()
+        device.config_entry_id = mock_config_entry.entry_id
+        # Delete config_entries to verify config_entry_id is used
+        del device.config_entries
+
+        with patch(
+            "custom_components.wattpilot.utils.dr.async_get"
+        ) as mock_get_registry:
+            mock_registry = MagicMock()
+            mock_registry.async_get = MagicMock(return_value=device)
+            mock_get_registry.return_value = mock_registry
+
+            mock_hass.config_entries.async_get_entry = MagicMock(
+                return_value=mock_config_entry
+            )
+
+            result = await async_GetDataStoreFromDeviceID(mock_hass, "test_device_id")
+
+            assert result is not None
+            assert "entry" in result
+            assert "runtime_data" in result
+
+    def test_resolve_wattpilot_entry_ordinary_device_does_not_access_config_entries(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any
+    ) -> None:
+        """Test _resolve_wattpilot_entry uses config_entry_id without touching config_entries."""
+        device = MagicMock(spec=["config_entry_id"])
+        device.config_entry_id = mock_config_entry.entry_id
+
+        mock_hass.config_entries.async_get_entry = MagicMock(
+            return_value=mock_config_entry
+        )
+
+        resolved = _resolve_wattpilot_entry(mock_hass, device)
+        assert resolved == mock_config_entry
+
+    def test_resolve_wattpilot_entry_composite_and_fallback(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any
+    ) -> None:
+        """Test _resolve_wattpilot_entry falls back to config_entries for composite or legacy devices."""
+        # Primary is a foreign domain, config_entries contains Wattpilot entry
+        device = MagicMock()
+        device.config_entry_id = "foreign_entry_id"
+        device.is_composite_device = True
+        device.config_entries = ["foreign_entry_id", mock_config_entry.entry_id]
+
+        foreign_entry = MagicMock()
+        foreign_entry.domain = "other_domain"
+
+        def mock_get(entry_id: str) -> Any:
+            if entry_id == "foreign_entry_id":
+                return foreign_entry
+            if entry_id == mock_config_entry.entry_id:
+                return mock_config_entry
+            return None
+
+        mock_hass.config_entries.async_get_entry = MagicMock(side_effect=mock_get)
+
+        resolved = _resolve_wattpilot_entry(mock_hass, device)
+        assert resolved == mock_config_entry
+
+        # Legacy device with no config_entry_id
+        device_legacy = MagicMock()
+        device_legacy.config_entry_id = None
+        device_legacy.config_entries = [mock_config_entry.entry_id]
+
+        resolved_legacy = _resolve_wattpilot_entry(mock_hass, device_legacy)
+        assert resolved_legacy == mock_config_entry
+
+        # Ordinary device with non-matching entry does not access config_entries
+        device_ordinary_other = MagicMock(spec=["config_entry_id"])
+        device_ordinary_other.config_entry_id = "foreign_entry_id"
+        assert _resolve_wattpilot_entry(mock_hass, device_ordinary_other) is None
+
+        # No matching entry
+        device_no_match = MagicMock()
+        device_no_match.config_entry_id = None
+        device_no_match.config_entries = []
+
+        assert _resolve_wattpilot_entry(mock_hass, device_no_match) is None
+
+    @pytest.mark.asyncio
+    async def test_get_data_store_from_device_id_composite_device(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any
+    ) -> None:
+        """Test async_GetDataStoreFromDeviceID handles composite devices where primary belongs to another domain."""
+        device = MagicMock()
+        device.config_entry_id = "other_domain_entry_id"
+        device.is_composite_device = True
+        device.config_entries = ["other_domain_entry_id", mock_config_entry.entry_id]
+
+        other_entry = MagicMock()
+        other_entry.domain = "other_domain"
+
+        with patch(
+            "custom_components.wattpilot.utils.dr.async_get"
+        ) as mock_get_registry:
+            mock_registry = MagicMock()
+            mock_registry.async_get = MagicMock(return_value=device)
+            mock_get_registry.return_value = mock_registry
+
+            def mock_get_entry(entry_id: str) -> Any:
+                if entry_id == "other_domain_entry_id":
+                    return other_entry
+                if entry_id == mock_config_entry.entry_id:
+                    return mock_config_entry
+                return None
+
+            mock_hass.config_entries.async_get_entry = MagicMock(
+                side_effect=mock_get_entry
+            )
+
+            result = await async_GetDataStoreFromDeviceID(mock_hass, "test_device_id")
+
+            assert result is not None
+            assert result["entry"] == mock_config_entry
+            assert "runtime_data" in result
+
+    @pytest.mark.asyncio
     async def test_get_data_store_from_device_id_device_not_found(
         self, mock_hass: HomeAssistant
     ) -> None:
@@ -436,6 +581,64 @@ class TestDeviceRegistry:
 
             mock_hass.config_entries.async_get_entry = MagicMock(
                 return_value=mock_config_entry
+            )
+
+            result = await async_GetChargerFromDeviceID(mock_hass, "test_device_id")
+            assert result == mock_charger
+
+    @pytest.mark.asyncio
+    async def test_get_charger_from_device_id_with_config_entry_id(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test async_GetChargerFromDeviceID with device.config_entry_id (HA 2026.10+)."""
+        device = MagicMock()
+        device.config_entry_id = mock_config_entry.entry_id
+        # Delete config_entries to verify config_entry_id is used
+        del device.config_entries
+
+        with patch(
+            "custom_components.wattpilot.utils.dr.async_get"
+        ) as mock_get_registry:
+            mock_registry = MagicMock()
+            mock_registry.async_get = MagicMock(return_value=device)
+            mock_get_registry.return_value = mock_registry
+
+            mock_hass.config_entries.async_get_entry = MagicMock(
+                return_value=mock_config_entry
+            )
+
+            result = await async_GetChargerFromDeviceID(mock_hass, "test_device_id")
+            assert result == mock_charger
+
+    @pytest.mark.asyncio
+    async def test_get_charger_from_device_id_composite_device(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test async_GetChargerFromDeviceID handles composite devices where primary belongs to another domain."""
+        device = MagicMock()
+        device.config_entry_id = "other_domain_entry_id"
+        device.is_composite_device = True
+        device.config_entries = ["other_domain_entry_id", mock_config_entry.entry_id]
+
+        other_entry = MagicMock()
+        other_entry.domain = "other_domain"
+
+        with patch(
+            "custom_components.wattpilot.utils.dr.async_get"
+        ) as mock_get_registry:
+            mock_registry = MagicMock()
+            mock_registry.async_get = MagicMock(return_value=device)
+            mock_get_registry.return_value = mock_registry
+
+            def mock_get_entry(entry_id: str) -> Any:
+                if entry_id == "other_domain_entry_id":
+                    return other_entry
+                if entry_id == mock_config_entry.entry_id:
+                    return mock_config_entry
+                return None
+
+            mock_hass.config_entries.async_get_entry = MagicMock(
+                side_effect=mock_get_entry
             )
 
             result = await async_GetChargerFromDeviceID(mock_hass, "test_device_id")

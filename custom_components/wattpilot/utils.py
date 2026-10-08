@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.const import (
@@ -152,6 +153,16 @@ def GetChargerProp(
         return default
 
 
+def has_charger_prop(charger: Any, identifier: str | None = None) -> bool:
+    """Return True if identifier is present in charger.all_properties mapping."""
+    if identifier is None:
+        return False
+    all_props = getattr(charger, "all_properties", None)
+    if not isinstance(all_props, Mapping):
+        return False
+    return identifier in all_props
+
+
 async def async_SetChargerProp(
     charger: Any,
     identifier: str | None = None,
@@ -190,6 +201,31 @@ async def async_SetChargerProp(
     return True
 
 
+def _resolve_wattpilot_entry(hass: HomeAssistant, device: Any) -> ConfigEntry | None:
+    """Resolve the Wattpilot ConfigEntry for a device without accessing config_entries on ordinary devices."""
+    config_entry_id = getattr(device, "config_entry_id", None)
+    if config_entry_id:
+        entry = hass.config_entries.async_get_entry(config_entry_id)
+        if entry is not None and entry.domain == DOMAIN:
+            return entry
+
+    # Fall back to inspecting additional entries for composite or legacy devices
+    is_composite = (
+        getattr(device, "is_composite_device", False)
+        or getattr(device, "_composite_subentries", None) is not None
+        or not config_entry_id
+    )
+    if is_composite:
+        for entry_id in getattr(device, "config_entries", ()):
+            if entry_id == config_entry_id:
+                continue
+            entry = hass.config_entries.async_get_entry(entry_id)
+            if entry is not None and entry.domain == DOMAIN:
+                return entry
+
+    return None
+
+
 async def async_GetDataStoreFromDeviceID(
     hass: HomeAssistant, device_id: str
 ) -> dict[str, Any] | None:
@@ -214,20 +250,17 @@ async def async_GetDataStoreFromDeviceID(
             "%s - async_GetDataStoreFromDeviceID: get data store for config entry",
             DOMAIN,
         )
-        for entry_id in device.config_entries:
-            entry = hass.config_entries.async_get_entry(entry_id)
-            if entry is None or entry.domain != DOMAIN:
-                continue
+        entry = _resolve_wattpilot_entry(hass, device)
+        if entry is not None:
             runtime_data = getattr(entry, "runtime_data", None)
-            if runtime_data is None:
-                continue
-            return {
-                CONF_CHARGER: runtime_data.charger,
-                CONF_PUSH_ENTITIES: runtime_data.push_entities,
-                CONF_PARAMS: runtime_data.params,
-                "entry": entry,
-                "runtime_data": runtime_data,
-            }
+            if runtime_data is not None:
+                return {
+                    CONF_CHARGER: runtime_data.charger,
+                    CONF_PUSH_ENTITIES: runtime_data.push_entities,
+                    CONF_PARAMS: runtime_data.params,
+                    "entry": entry,
+                    "runtime_data": runtime_data,
+                }
 
         _LOGGER.error(
             "%s - async_GetDataStoreFromDeviceID: Unable to receive data store: %s",
@@ -263,28 +296,18 @@ async def async_GetChargerFromDeviceID(hass: HomeAssistant, device_id: str) -> A
             "%s - async_GetChargerFromDeviceID: get charger object for entry",
             DOMAIN,
         )
-        charger: Any | None = None
-        for entry_id in device.config_entries:
-            entry = hass.config_entries.async_get_entry(entry_id)
-            if entry is None or entry.domain != DOMAIN:
-                continue
+        entry = _resolve_wattpilot_entry(hass, device)
+        if entry is not None:
             runtime_data = getattr(entry, "runtime_data", None)
-            if runtime_data is None:
-                continue
-            charger = runtime_data.charger
-            break
-        if charger is None:
-            _LOGGER.error(
-                "%s - async_GetChargerFromDeviceID: Unable to identify charger for device: %s",
-                DOMAIN,
-                device_id,
-            )
-            return None
+            if runtime_data is not None and runtime_data.charger is not None:
+                return runtime_data.charger
 
-        _LOGGER.debug(
-            "%s - async_GetChargerFromDeviceID: return charger object", DOMAIN
+        _LOGGER.error(
+            "%s - async_GetChargerFromDeviceID: Unable to identify charger for device: %s",
+            DOMAIN,
+            device_id,
         )
-        return charger
+        return None
     except Exception:
         _LOGGER.exception(
             "%s - async_GetChargerFromDeviceID: Could not get charger", DOMAIN

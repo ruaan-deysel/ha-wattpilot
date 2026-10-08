@@ -467,6 +467,86 @@ class TestFilterDescriptions:
         assert result[0].key == "test1"
         assert result[1].key == "test3"
 
+    def test_filter_descriptions_trx_null_retains_id_chip_current(
+        self, mock_charger: MagicMock, mock_config_entry: Any
+    ) -> None:
+        """Test that present-null trx keeps id_chip_current."""
+        mock_charger.all_properties["trx"] = None
+
+        desc = WattpilotSensorEntityDescription(
+            key="id_chip_current",
+            charger_key="trx",
+            name="ID Chip Current",
+            source=SOURCE_PROPERTY,
+        )
+
+        result = filter_descriptions(
+            [desc], mock_charger, mock_config_entry, "test_charger"
+        )
+        assert len(result) == 1
+        assert result[0].key == "id_chip_current"
+
+    def test_filter_descriptions_trx_absent_drops_id_chip_current(
+        self, mock_charger: MagicMock, mock_config_entry: Any
+    ) -> None:
+        """Test that absent trx drops id_chip_current for chargers without NFC."""
+        mock_charger.all_properties.pop("trx", None)
+
+        desc = WattpilotSensorEntityDescription(
+            key="id_chip_current",
+            charger_key="trx",
+            name="ID Chip Current",
+            source=SOURCE_PROPERTY,
+        )
+
+        result = filter_descriptions(
+            [desc], mock_charger, mock_config_entry, "test_charger"
+        )
+        assert len(result) == 0
+
+    def test_filter_descriptions_all_properties_none_drops_property_descriptions(
+        self, mock_charger: MagicMock, mock_config_entry: Any
+    ) -> None:
+        """Test that all_properties=None drops property descriptions."""
+        mock_charger.all_properties = None
+
+        desc_prop = WattpilotSensorEntityDescription(
+            key="id_chip_current",
+            charger_key="trx",
+            name="ID Chip Current",
+            source=SOURCE_PROPERTY,
+        )
+        desc_none = WattpilotSensorEntityDescription(
+            key="test_none_source",
+            charger_key="trx",
+            name="None Source",
+            source=SOURCE_NONE,
+        )
+
+        result = filter_descriptions(
+            [desc_prop, desc_none], mock_charger, mock_config_entry, "test_charger"
+        )
+        assert len(result) == 1
+        assert result[0].key == "test_none_source"
+
+    def test_filter_descriptions_all_properties_not_mapping_drops_property_descriptions(
+        self, mock_charger: MagicMock, mock_config_entry: Any
+    ) -> None:
+        """Test that all_properties not being a mapping drops property descriptions."""
+        mock_charger.all_properties = "not_a_mapping"
+
+        desc_prop = WattpilotSensorEntityDescription(
+            key="id_chip_current",
+            charger_key="trx",
+            name="ID Chip Current",
+            source=SOURCE_PROPERTY,
+        )
+
+        result = filter_descriptions(
+            [desc_prop], mock_charger, mock_config_entry, "test_charger"
+        )
+        assert len(result) == 0
+
 
 class TestChargerPlatformEntity:
     """Test ChargerPlatformEntity class."""
@@ -640,6 +720,26 @@ class TestChargerPlatformEntity:
         entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
 
         # Should be available
+        assert entity.available is True
+
+    def test_entity_available_property_none_value(
+        self, mock_hass: HomeAssistant, mock_config_entry: Any, mock_charger: MagicMock
+    ) -> None:
+        """Test entity available when property is present but has None value."""
+        mock_charger.all_properties = {"trx": None}
+        mock_charger.connected = True
+        mock_charger.properties_initialized = True
+
+        desc = WattpilotSensorEntityDescription(
+            key="id_chip_current",
+            charger_key="trx",
+            name="Current Card ID",
+            source=SOURCE_PROPERTY,
+            default_state=999,
+        )
+
+        entity = ChargerPlatformEntity(mock_hass, mock_config_entry, desc, mock_charger)
+
         assert entity.available is True
 
     def test_entity_available_init_failed(
